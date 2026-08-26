@@ -1,4 +1,6 @@
 import { TestingModule, Test } from '@nestjs/testing';
+import { CommonModule } from '../../../src/common/common.module';
+import { RuntimeConfigModule } from '../../../src/config/runtime-config.module';
 import { Payment } from '../../../src/payments/domain/payment';
 import { PaymentCurrency } from '../../../src/payments/domain/payment-status';
 import { PaymentsModule } from '../../../src/payments/payments.module';
@@ -13,7 +15,7 @@ describe('PaymentsModule', () => {
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
-      imports: [PaymentsModule],
+      imports: [RuntimeConfigModule, CommonModule, PaymentsModule],
     }).compile();
   });
 
