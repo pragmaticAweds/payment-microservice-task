@@ -92,8 +92,8 @@ The exact number of commits may change when a checkpoint contains more than one 
 | 3 | Configuration, logging, validation, errors, and shutdown | Completed |
 | 4 | Payment domain, state machine, and persistence | Completed |
 | 5 | REST API and complete Swagger documentation | Completed |
-| 6 | Concurrency-safe idempotency | Awaiting user verification |
-| 7 | Asynchronous deterministic payment processing | Not started |
+| 6 | Concurrency-safe idempotency | Completed |
+| 7 | Asynchronous deterministic payment processing | Awaiting user verification |
 | 8 | Rate limiting and health endpoints | Not started |
 | 9 | Jest unit/e2e tests and coverage enforcement | Not started |
 | 10 | Docker, CI, README, and final local verification | Not started |
@@ -356,6 +356,29 @@ bun run test -- processor
 bun run test:e2e -- processing
 bun run typecheck
 ```
+
+### Implementation evidence
+
+- Fresh `POST /api/v1/payments` requests return the immutable original `pending` response before automatic processing runs.
+- The controller schedules work only inside the idempotency coordinator's fresh-request callback; sequential and concurrent replays do not create another job.
+- `PaymentProcessor` owns cancellable timer handles and moves the latest stored payment through `pending -> processing -> succeeded | failed` without blocking the request.
+- A zero-delay kickoff preserves asynchronous response behavior, while the terminal timer reads the validated `PROCESSING_DELAY_MS` value.
+- `DeterministicPaymentOutcomeResolver` hashes `<idempotencyKey>:<smallestUnitAmount>:<currency>`, reads the first unsigned 32-bit big-endian value, and compares its `[0, 1)` score with `SIMULATED_SUCCESS_RATE`.
+- Scheduling and outcome resolution use explicit Nest injection tokens, keeping timers, hashing, and framework concerns outside the payment aggregate.
+- The processor re-reads current state before each phase, continues an existing `processing` payment, and safely stops when another caller already made the payment terminal.
+- Background failures are caught, logged, and recovered through legal transitions to `failed`; recovery persistence failures are also logged and consumed.
+- Structured processing logs include stable event names, payment IDs, duration, terminal outcome, and a SHA-256 key hash without exposing the raw idempotency key.
+- Nest shutdown stops new work, cancels outstanding timers, and makes `PaymentProcessor.isReady()` return `false` for the upcoming readiness endpoint.
+- Atomic commits: `eae2cbf`, `306ad5c`, `5c3eb95`, and `9a3330e` (with design and execution plans in `e351d5e` and `9eda59f`).
+
+### Verification evidence — 2026-08-26
+
+- `bun install --frozen-lockfile`: 733 installs across 708 packages checked with no changes.
+- `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run build`, and `git diff --check`: exited successfully.
+- `bun run test -- processor outcome`: 2 suites, 13 tests passed.
+- `bun run test`: 13 suites, 82 tests passed.
+- `bun run test:e2e -- processing`: 1 suite, 3 tests passed.
+- `bun run test:e2e`: 4 suites, 48 tests passed.
 
 ---
 
