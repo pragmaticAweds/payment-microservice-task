@@ -19,9 +19,11 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
+import { PaymentCreationRateLimit } from '../../common/rate-limit/payment-creation-rate-limit.decorator';
 import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
 import { PaymentsService } from '../application/payments.service';
 import type { Payment } from '../domain/payment';
@@ -43,12 +45,51 @@ const REQUEST_ID_RESPONSE_HEADERS = {
 
 const CREATE_PAYMENT_RESPONSE_HEADERS = {
   ...REQUEST_ID_RESPONSE_HEADERS,
+  'X-RateLimit-Limit': {
+    description: 'Maximum requests allowed by the general policy window',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Remaining': {
+    description: 'General-policy requests remaining in the current window',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Reset': {
+    description: 'Seconds until the general policy window resets',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Limit-payment-create': {
+    description:
+      'Maximum payment creations allowed by the payment-create policy window',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Remaining-payment-create': {
+    description:
+      'Payment creations remaining in the current payment-create window',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Reset-payment-create': {
+    description: 'Seconds until the payment-create policy window resets',
+    schema: { type: 'integer' },
+  },
   'Idempotency-Replayed': {
     description:
       'Present with value true when the original response is replayed',
     schema: { type: 'string', enum: ['true'] },
   },
 };
+
+const CREATE_PAYMENT_RATE_LIMIT_ERROR_HEADERS = {
+  ...REQUEST_ID_RESPONSE_HEADERS,
+  'Retry-After': {
+    description: 'Seconds until the exceeded policy accepts another request',
+    schema: { type: 'integer' },
+  },
+  'Retry-After-payment-create': {
+    description:
+      'Seconds until the payment-create policy accepts another request',
+    schema: { type: 'integer' },
+  },
+} as const;
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -60,6 +101,7 @@ export class PaymentsController {
   ) {}
 
   @Post()
+  @PaymentCreationRateLimit()
   @ApiOperation({ summary: 'Create a pending payment' })
   @ApiHeader({
     name: 'X-Request-Id',
@@ -85,6 +127,11 @@ export class PaymentsController {
   @ApiConflictResponse({
     description: 'Idempotency key was previously used with a different request',
     headers: REQUEST_ID_RESPONSE_HEADERS,
+    type: ErrorResponseDto,
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'Payment creation rate limit exceeded',
+    headers: CREATE_PAYMENT_RATE_LIMIT_ERROR_HEADERS,
     type: ErrorResponseDto,
   })
   async create(
