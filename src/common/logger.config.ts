@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { IncomingMessage, ServerResponse } from 'node:http';
+import { RequestMethod } from '@nestjs/common';
 import { Params } from 'nestjs-pino';
 
 export const REQUEST_ID_HEADER = 'x-request-id';
@@ -29,6 +30,7 @@ function getRequestId(request: IncomingMessage): string {
 
 export function createLoggerOptions(environment: LoggerEnvironment): Params {
   return {
+    forRoutes: [{ path: '{*path}', method: RequestMethod.ALL }],
     pinoHttp: {
       name: environment.SERVICE_NAME,
       level: environment.LOG_LEVEL,

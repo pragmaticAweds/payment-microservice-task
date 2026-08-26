@@ -1,3 +1,4 @@
+import { RequestMethod } from '@nestjs/common';
 import { createLoggerOptions } from '../../src/common/logger.config';
 
 describe('createLoggerOptions', () => {
@@ -21,5 +22,8 @@ describe('createLoggerOptions', () => {
         ],
       },
     });
+    expect(options.forRoutes).toEqual([
+      { path: '{*path}', method: RequestMethod.ALL },
+    ]);
   });
 });
