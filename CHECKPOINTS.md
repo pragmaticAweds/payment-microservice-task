@@ -91,8 +91,8 @@ The exact number of commits may change when a checkpoint contains more than one 
 | 2 | NestJS/Express scaffold and project boundaries | Completed |
 | 3 | Configuration, logging, validation, errors, and shutdown | Completed |
 | 4 | Payment domain, state machine, and persistence | Completed |
-| 5 | REST API and complete Swagger documentation | Awaiting user verification |
-| 6 | Concurrency-safe idempotency | Not started |
+| 5 | REST API and complete Swagger documentation | Completed |
+| 6 | Concurrency-safe idempotency | Awaiting user verification |
 | 7 | Asynchronous deterministic payment processing | Not started |
 | 8 | Rate limiting and health endpoints | Not started |
 | 9 | Jest unit/e2e tests and coverage enforcement | Not started |
@@ -301,9 +301,30 @@ bun run build
 
 ```bash
 bun run test -- idempotency
-bun run test:e2e -- idempotency
+bun run test:e2e -- payments
 bun run typecheck
 ```
+
+### Implementation evidence
+
+- `POST /api/v1/payments` requires an `Idempotency-Key` containing 1 to 128 safe token characters.
+- Missing or invalid keys map to `400 INVALID_IDEMPOTENCY_KEY`; conflicting payload reuse maps to `409 IDEMPOTENCY_CONFLICT`.
+- Canonical SHA-256 request fingerprints normalize merchant references and optional descriptions before comparison.
+- Each in-memory record stores the key, fingerprint, payment ID, immutable original response, and creation time behind an injection-token repository interface.
+- A synchronously registered in-flight promise coalesces concurrent same-key/same-payload requests into one payment creation.
+- Sequential and concurrent replays return the original response with `Idempotency-Replayed: true`, including after the current payment status changes.
+- Structured logs contain only a SHA-256 key hash; the existing Pino request logger also redacts the raw `idempotency-key` header.
+- Swagger documents the required request header, replay response header, and `400`/`409` errors.
+- Atomic commits: `dbbf494` and `6a1cb79`.
+
+### Verification evidence — 2026-08-26
+
+- `bun install --frozen-lockfile`: 733 installs across 708 packages checked with no changes.
+- `bun run format:check`, `bun run lint`, `bun run typecheck`, and `bun run build`: exited successfully.
+- `bun run test -- idempotency`: 2 suites, 14 tests passed.
+- `bun run test`: 10 suites, 62 tests passed.
+- `bun run test:e2e -- payments`: 1 suite, 37 tests passed.
+- `bun run test:e2e`: 3 suites, 45 tests passed.
 
 ---
 
