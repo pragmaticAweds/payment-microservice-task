@@ -1,4 +1,8 @@
 import { HttpStatus } from '@nestjs/common';
+import {
+  IdempotencyConflictError,
+  InvalidIdempotencyKeyError,
+} from '../../payments/application/idempotency.errors';
 import { PaymentNotFoundError } from '../../payments/application/payment-not-found.error';
 import {
   InvalidPaymentError,
@@ -15,6 +19,22 @@ export interface MappedApplicationError {
 export function mapApplicationError(
   exception: unknown,
 ): MappedApplicationError | null {
+  if (exception instanceof InvalidIdempotencyKeyError) {
+    return {
+      statusCode: HttpStatus.BAD_REQUEST,
+      code: exception.code,
+      message: exception.message,
+    };
+  }
+
+  if (exception instanceof IdempotencyConflictError) {
+    return {
+      statusCode: HttpStatus.CONFLICT,
+      code: exception.code,
+      message: exception.message,
+    };
+  }
+
   if (exception instanceof InvalidPaymentError) {
     return {
       statusCode: HttpStatus.BAD_REQUEST,

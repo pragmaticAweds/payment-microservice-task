@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -18,7 +20,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
+import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
 import { PaymentsService } from '../application/payments.service';
 import type { Payment } from '../domain/payment';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -36,10 +40,22 @@ const REQUEST_ID_RESPONSE_HEADERS = {
   },
 } as const;
 
+const CREATE_PAYMENT_RESPONSE_HEADERS = {
+  ...REQUEST_ID_RESPONSE_HEADERS,
+  'Idempotency-Replayed': {
+    description:
+      'Present with value true when the original response is replayed',
+    schema: { type: 'string', enum: ['true'] },
+  },
+};
+
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly idempotencyService: PaymentCreationIdempotencyService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a pending payment' })
@@ -48,9 +64,15 @@ export class PaymentsController {
     required: false,
     description: 'Optional caller-provided correlation identifier',
   })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description:
+      'Unique payment-creation key using 1 to 128 letters, numbers, dots, underscores, colons, or hyphens',
+  })
   @ApiCreatedResponse({
     description: 'Payment created in pending state',
-    headers: REQUEST_ID_RESPONSE_HEADERS,
+    headers: CREATE_PAYMENT_RESPONSE_HEADERS,
     type: PaymentDataResponseDto,
   })
   @ApiBadRequestResponse({
@@ -58,9 +80,28 @@ export class PaymentsController {
     headers: REQUEST_ID_RESPONSE_HEADERS,
     type: ErrorResponseDto,
   })
-  async create(@Body() input: CreatePaymentDto): Promise<PaymentDataResponse> {
+  @ApiConflictResponse({
+    description: 'Idempotency key was previously used with a different request',
+    headers: REQUEST_ID_RESPONSE_HEADERS,
+    type: ErrorResponseDto,
+  })
+  async create(
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Body() input: CreatePaymentDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PaymentDataResponse> {
+    const result = await this.idempotencyService.execute(
+      idempotencyKey,
+      input,
+      () => this.paymentsService.create(input),
+    );
+
+    if (result.replayed) {
+      response.setHeader('Idempotency-Replayed', 'true');
+    }
+
     return {
-      data: await this.paymentsService.create(input),
+      data: result.payment,
     };
   }
 

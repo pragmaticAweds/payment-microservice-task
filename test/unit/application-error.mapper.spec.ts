@@ -1,5 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
 import { mapApplicationError } from '../../src/common/filters/application-error.mapper';
+import {
+  IdempotencyConflictError,
+  InvalidIdempotencyKeyError,
+} from '../../src/payments/application/idempotency.errors';
 import { PaymentNotFoundError } from '../../src/payments/application/payment-not-found.error';
 import {
   InvalidPaymentError,
@@ -44,6 +48,23 @@ describe('mapApplicationError', () => {
         from: PaymentStatus.PENDING,
         to: PaymentStatus.SUCCEEDED,
       },
+    });
+  });
+
+  it('maps an invalid idempotency key to bad request', () => {
+    expect(mapApplicationError(new InvalidIdempotencyKeyError())).toEqual({
+      statusCode: HttpStatus.BAD_REQUEST,
+      code: 'INVALID_IDEMPOTENCY_KEY',
+      message:
+        'Idempotency-Key must contain 1 to 128 letters, numbers, dots, underscores, colons, or hyphens',
+    });
+  });
+
+  it('maps conflicting idempotency reuse to conflict', () => {
+    expect(mapApplicationError(new IdempotencyConflictError())).toEqual({
+      statusCode: HttpStatus.CONFLICT,
+      code: 'IDEMPOTENCY_CONFLICT',
+      message: 'Idempotency-Key has already been used with a different request',
     });
   });
 

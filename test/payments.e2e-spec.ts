@@ -110,9 +110,11 @@ describe('Payments API (e2e)', () => {
 
   async function createPayment(
     requestBody: Record<string, unknown> = validRequest,
+    idempotencyKey: string = randomUUID(),
   ): Promise<Response> {
     return request(app.getHttpServer())
       .post('/api/v1/payments')
+      .set('Idempotency-Key', idempotencyKey)
       .send(requestBody)
       .expect(201);
   }
@@ -162,6 +164,7 @@ describe('Payments API (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/api/v1/payments')
       .set('x-request-id', 'create-payment-request')
+      .set('Idempotency-Key', randomUUID())
       .send(validRequest)
       .expect(201);
     const createdBody = created.body as PaymentResponseBody;
@@ -203,6 +206,106 @@ describe('Payments API (e2e)', () => {
     );
   });
 
+  it('rejects payment creation without an idempotency key', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/payments')
+      .send(validRequest)
+      .expect(400);
+
+    expectErrorEnvelope(response, {
+      statusCode: 400,
+      code: 'INVALID_IDEMPOTENCY_KEY',
+      path: '/api/v1/payments',
+    });
+  });
+
+  it.each(['contains spaces', 'contains/slash', 'x'.repeat(129)])(
+    'rejects invalid idempotency key %s',
+    async (idempotencyKey) => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/payments')
+        .set('Idempotency-Key', idempotencyKey)
+        .send(validRequest)
+        .expect(400);
+
+      expectErrorEnvelope(response, {
+        statusCode: 400,
+        code: 'INVALID_IDEMPOTENCY_KEY',
+        path: '/api/v1/payments',
+      });
+    },
+  );
+
+  it('replays the original response for the same key and payload', async () => {
+    const key = 'sequential-replay-key';
+    const original = await createPayment(validRequest, key);
+    const replay = await createPayment(
+      {
+        ...validRequest,
+        merchantReference: 'order-2026-0001',
+        description: 'Invoice 0001',
+      },
+      key,
+    );
+
+    expect(replay.body).toEqual(original.body);
+    expect(original.headers['idempotency-replayed']).toBeUndefined();
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+  });
+
+  it('replays the creation response after the payment status changes', async () => {
+    const key = 'original-response-key';
+    const original = await createPayment(validRequest, key);
+    const originalBody = original.body as PaymentResponseBody;
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/payments/${originalBody.data.id}/status`)
+      .send({ status: 'processing' })
+      .expect(200);
+    const replay = await createPayment(validRequest, key);
+
+    expect(replay.body).toEqual(original.body);
+    expect((replay.body as PaymentResponseBody).data.status).toBe('pending');
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+  });
+
+  it('returns 409 when a key is reused with a different payload', async () => {
+    const key = 'conflicting-payload-key';
+    await createPayment(validRequest, key);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/payments')
+      .set('Idempotency-Key', key)
+      .send({ ...validRequest, smallestUnitAmount: 1051 })
+      .expect(409);
+
+    expectErrorEnvelope(response, {
+      statusCode: 409,
+      code: 'IDEMPOTENCY_CONFLICT',
+      path: '/api/v1/payments',
+    });
+  });
+
+  it('coalesces concurrent same-key requests into one response', async () => {
+    const key = 'concurrent-replay-key';
+    const sendCreation = (): Promise<Response> =>
+      request(app.getHttpServer())
+        .post('/api/v1/payments')
+        .set('Idempotency-Key', key)
+        .send(validRequest);
+
+    const [first, second] = await Promise.all([sendCreation(), sendCreation()]);
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body).toEqual(first.body);
+    expect(
+      [first, second].filter(
+        (response) => response.headers['idempotency-replayed'] === 'true',
+      ),
+    ).toHaveLength(1);
+  });
+
   it.each([
     [{ smallestUnitAmount: 0 }, 'smallestUnitAmount'],
     [{ smallestUnitAmount: 10.5 }, 'smallestUnitAmount'],
@@ -219,6 +322,7 @@ describe('Payments API (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/payments')
         .set('x-request-id', 'invalid-payment-request')
+        .set('Idempotency-Key', randomUUID())
         .send({ ...validRequest, ...override })
         .expect(400);
       const body = expectErrorEnvelope(response, {
@@ -236,6 +340,7 @@ describe('Payments API (e2e)', () => {
   it('rejects missing required creation fields', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/payments')
+      .set('Idempotency-Key', randomUUID())
       .send({ currency: 'USD' })
       .expect(400);
     const body = expectErrorEnvelope(response, {
@@ -485,6 +590,7 @@ describe('Payments API (e2e)', () => {
     });
     expect(create?.responses).toHaveProperty('201');
     expect(create?.responses).toHaveProperty('400');
+    expect(create?.responses).toHaveProperty('409');
     expect(retrieve?.responses).toHaveProperty('200');
     expect(retrieve?.responses).toHaveProperty('400');
     expect(retrieve?.responses).toHaveProperty('404');
@@ -492,6 +598,18 @@ describe('Payments API (e2e)', () => {
     expect(transition?.responses).toHaveProperty('400');
     expect(transition?.responses).toHaveProperty('404');
     expect(transition?.responses).toHaveProperty('409');
+    expect(create?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: 'header',
+          name: 'Idempotency-Key',
+          required: true,
+        }),
+      ]),
+    );
+    expect(create?.responses['201']?.headers).toHaveProperty(
+      'Idempotency-Replayed',
+    );
 
     const createSchema = document.components.schemas.CreatePaymentDto;
     expect(createSchema?.required).toEqual(
