@@ -32,6 +32,58 @@ interface ErrorResponseBody {
   details?: unknown;
 }
 
+interface OpenApiSchemaProperty {
+  enum?: string[];
+  example?: unknown;
+  format?: string;
+  maximum?: number;
+  maxLength?: number;
+  minimum?: number;
+  minLength?: number;
+  type?: string;
+}
+
+interface OpenApiSchema {
+  properties?: Record<string, OpenApiSchemaProperty>;
+  required?: string[];
+}
+
+interface OpenApiResponse {
+  headers?: Record<string, unknown>;
+}
+
+interface OpenApiOperation {
+  parameters?: Array<{
+    in: string;
+    name: string;
+    required?: boolean;
+  }>;
+  requestBody?: {
+    content: Record<string, { schema: unknown }>;
+  };
+  responses: Record<string, OpenApiResponse>;
+  tags?: string[];
+}
+
+interface OpenApiDocument {
+  openapi: string;
+  info: {
+    title: string;
+    version: string;
+  };
+  paths: Record<
+    string,
+    {
+      get?: OpenApiOperation;
+      patch?: OpenApiOperation;
+      post?: OpenApiOperation;
+    }
+  >;
+  components: {
+    schemas: Record<string, OpenApiSchema>;
+  };
+}
+
 describe('Payments API (e2e)', () => {
   const validRequest = {
     smallestUnitAmount: 1050,
@@ -376,5 +428,123 @@ describe('Payments API (e2e)', () => {
       code: 'PAYMENT_NOT_FOUND',
       path,
     });
+  });
+
+  it('serves Swagger UI and a versioned OpenAPI document', async () => {
+    const html = await request(app.getHttpServer()).get('/docs').expect(200);
+
+    expect(html.headers['content-type']).toContain('text/html');
+    expect(html.text).toContain('Swagger UI');
+
+    const response = await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+    const document = response.body as OpenApiDocument;
+
+    expect(document.openapi).toMatch(/^3\./);
+    expect(document.info).toMatchObject({
+      title: 'Node Payment Microservice',
+      version: '1.0.0',
+    });
+    expect(document.paths['/api/v1/payments']?.post).toBeDefined();
+    expect(document.paths['/api/v1/payments/{id}']?.get).toBeDefined();
+    expect(document.paths['/api/v1/payments/{id}/status']?.patch).toBeDefined();
+  });
+
+  it('documents payment schemas, request IDs, and every response code', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+    const document = response.body as OpenApiDocument;
+    const create = document.paths['/api/v1/payments']?.post;
+    const retrieve = document.paths['/api/v1/payments/{id}']?.get;
+    const transition = document.paths['/api/v1/payments/{id}/status']?.patch;
+
+    expect(create).toBeDefined();
+    expect(retrieve).toBeDefined();
+    expect(transition).toBeDefined();
+
+    for (const operation of [create!, retrieve!, transition!]) {
+      expect(operation.tags).toContain('Payments');
+      expect(operation.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            in: 'header',
+            name: 'X-Request-Id',
+            required: false,
+          }),
+        ]),
+      );
+      for (const documentedResponse of Object.values(operation.responses)) {
+        expect(documentedResponse.headers).toEqual(
+          expect.objectContaining({
+            'x-request-id': expect.any(Object),
+          }),
+        );
+      }
+    }
+
+    expect(create?.requestBody?.content['application/json']?.schema).toEqual({
+      $ref: '#/components/schemas/CreatePaymentDto',
+    });
+    expect(create?.responses).toEqual(
+      expect.objectContaining({
+        '201': expect.any(Object),
+        '400': expect.any(Object),
+      }),
+    );
+    expect(retrieve?.responses).toEqual(
+      expect.objectContaining({
+        '200': expect.any(Object),
+        '400': expect.any(Object),
+        '404': expect.any(Object),
+      }),
+    );
+    expect(transition?.responses).toEqual(
+      expect.objectContaining({
+        '200': expect.any(Object),
+        '400': expect.any(Object),
+        '404': expect.any(Object),
+        '409': expect.any(Object),
+      }),
+    );
+
+    const createSchema = document.components.schemas.CreatePaymentDto;
+    expect(createSchema?.required).toEqual(
+      expect.arrayContaining([
+        'smallestUnitAmount',
+        'currency',
+        'merchantReference',
+      ]),
+    );
+    expect(createSchema?.properties?.smallestUnitAmount).toMatchObject({
+      example: 1050,
+      minimum: 1,
+      maximum: Number.MAX_SAFE_INTEGER,
+    });
+    expect(createSchema?.properties?.currency).toMatchObject({
+      enum: ['USD'],
+      example: 'USD',
+    });
+    expect(createSchema?.properties?.merchantReference).toMatchObject({
+      example: 'order-2026-0001',
+      minLength: 1,
+      maxLength: 100,
+    });
+    expect(createSchema?.properties?.description).toMatchObject({
+      example: 'Invoice 0001',
+      maxLength: 500,
+    });
+    expect(
+      document.components.schemas.UpdatePaymentStatusDto?.properties?.status
+        ?.enum,
+    ).toEqual(['processing', 'succeeded', 'failed']);
+    expect(document.components.schemas).toEqual(
+      expect.objectContaining({
+        PaymentDataResponseDto: expect.any(Object),
+        PaymentResponseDto: expect.any(Object),
+        ErrorResponseDto: expect.any(Object),
+      }),
+    );
   });
 });
