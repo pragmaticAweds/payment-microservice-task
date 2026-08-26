@@ -12,8 +12,17 @@ export class ApiThrottlerGuard extends ThrottlerGuard {
     context: ExecutionContext,
     throttlerLimitDetail: ThrottlerLimitDetail,
   ): Promise<void> {
-    void context;
-    void throttlerLimitDetail;
+    const response = context.switchToHttp().getResponse<{
+      header(name: string, value: number): unknown;
+    }>();
+
+    response.header('Retry-After', throttlerLimitDetail.timeToBlockExpire);
+    response.header('X-RateLimit-Limit', throttlerLimitDetail.limit);
+    response.header(
+      'X-RateLimit-Remaining',
+      Math.max(0, throttlerLimitDetail.limit - throttlerLimitDetail.totalHits),
+    );
+    response.header('X-RateLimit-Reset', throttlerLimitDetail.timeToExpire);
 
     return Promise.reject(
       new HttpException(

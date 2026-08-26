@@ -24,12 +24,33 @@ class TestHandlers {
 }
 
 class TestApiThrottlerGuard extends ApiThrottlerGuard {
-  throwForTest(): Promise<void> {
-    return this.throwThrottlingException(
-      {} as ExecutionContext,
-      {} as ThrottlerLimitDetail,
-    );
+  throwForTest(
+    context = defaultHttpExecutionContext(),
+    throttlerLimitDetail = defaultThrottlerLimitDetail(),
+  ): Promise<void> {
+    return this.throwThrottlingException(context, throttlerLimitDetail);
   }
+}
+
+function defaultHttpExecutionContext(): ExecutionContext {
+  return {
+    switchToHttp: () => ({
+      getResponse: () => ({ header: () => undefined }),
+    }),
+  } as unknown as ExecutionContext;
+}
+
+function defaultThrottlerLimitDetail(): ThrottlerLimitDetail {
+  return {
+    isBlocked: true,
+    key: 'default-key',
+    limit: 1,
+    timeToBlockExpire: 1,
+    timeToExpire: 1,
+    totalHits: 2,
+    tracker: '127.0.0.1',
+    ttl: 1000,
+  };
 }
 
 function getHandler(name: 'marked' | 'unmarked'): () => void {
@@ -95,6 +116,38 @@ describe('createThrottlerOptions', () => {
 });
 
 describe('ApiThrottlerGuard', () => {
+  it('sets standard headers for the policy that exceeded its limit', async () => {
+    const guard = Object.create(
+      TestApiThrottlerGuard.prototype,
+    ) as TestApiThrottlerGuard;
+    const header = jest.fn();
+    const context = {
+      switchToHttp: () => ({
+        getResponse: () => ({ header }),
+      }),
+    } as unknown as ExecutionContext;
+    const throttlerLimitDetail: ThrottlerLimitDetail = {
+      isBlocked: true,
+      key: 'payment-create-key',
+      limit: 2,
+      timeToBlockExpire: 7,
+      timeToExpire: 9,
+      totalHits: 5,
+      tracker: '127.0.0.1',
+      ttl: 5000,
+    };
+
+    await expect(
+      guard.throwForTest(context, throttlerLimitDetail),
+    ).rejects.toBeInstanceOf(HttpException);
+
+    expect(header).toHaveBeenCalledTimes(4);
+    expect(header).toHaveBeenNthCalledWith(1, 'Retry-After', 7);
+    expect(header).toHaveBeenNthCalledWith(2, 'X-RateLimit-Limit', 2);
+    expect(header).toHaveBeenNthCalledWith(3, 'X-RateLimit-Remaining', 0);
+    expect(header).toHaveBeenNthCalledWith(4, 'X-RateLimit-Reset', 9);
+  });
+
   it('throws a stable 429 HTTP exception', async () => {
     const guard = Object.create(
       TestApiThrottlerGuard.prototype,
