@@ -29,6 +29,25 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer()).get('/').expect(404);
   });
 
+  it('propagates a caller-provided request ID', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1')
+      .set('x-request-id', 'assessment-request-123')
+      .expect(200);
+
+    expect(response.headers['x-request-id']).toBe('assessment-request-123');
+  });
+
+  it('generates a request ID when the caller does not provide one', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1')
+      .expect(200);
+
+    expect(response.headers['x-request-id']).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
   afterEach(async () => {
     await app.close();
   });
