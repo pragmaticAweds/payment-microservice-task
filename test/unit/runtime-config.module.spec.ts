@@ -1,0 +1,24 @@
+import { validateEnvironment } from '../../src/config/environment';
+
+describe('validateEnvironment', () => {
+  it('applies safe local defaults', () => {
+    expect(validateEnvironment({})).toMatchObject({
+      NODE_ENV: 'development',
+      SERVICE_NAME: 'node-payment-microservice',
+      PORT: 3000,
+      LOG_LEVEL: 'info',
+      PROCESSING_DELAY_MS: 1000,
+      SIMULATED_SUCCESS_RATE: 0.8,
+      THROTTLE_TTL_MS: 60_000,
+      THROTTLE_LIMIT: 100,
+      PAYMENT_CREATE_THROTTLE_LIMIT: 10,
+      IDEMPOTENCY_TTL_MS: 86_400_000,
+    });
+  });
+
+  it('rejects invalid configuration with the field name', () => {
+    expect(() => validateEnvironment({ PROCESSING_DELAY_MS: '-1' })).toThrow(
+      'PROCESSING_DELAY_MS',
+    );
+  });
+});
