@@ -90,8 +90,8 @@ The exact number of commits may change when a checkpoint contains more than one 
 | 1 | Desktop workspace, Git, Bun, and `aweds-personal` binding | Completed |
 | 2 | NestJS/Express scaffold and project boundaries | Completed |
 | 3 | Configuration, logging, validation, errors, and shutdown | Completed |
-| 4 | Payment domain, state machine, and persistence | Awaiting user verification |
-| 5 | REST API and complete Swagger documentation | Not started |
+| 4 | Payment domain, state machine, and persistence | Completed |
+| 5 | REST API and complete Swagger documentation | Awaiting user verification |
 | 6 | Concurrency-safe idempotency | Not started |
 | 7 | Asynchronous deterministic payment processing | Not started |
 | 8 | Rate limiting and health endpoints | Not started |
@@ -255,6 +255,26 @@ bun run lint
 bun run typecheck
 bun run build
 ```
+
+### Implementation evidence
+
+- `POST /api/v1/payments` creates a pending USD payment and returns it in a `data` envelope.
+- `GET /api/v1/payments/:id` retrieves a payment; `PATCH /api/v1/payments/:id/status` enforces the domain state machine.
+- Validation and application errors map to the documented `400`, `404`, and `409` response envelopes.
+- Swagger UI is available at `/docs`; the OpenAPI 3 JSON contract is available at `/docs-json`.
+- Swagger documents DTO constraints, examples, `X-Request-Id`, response correlation headers, and every endpoint response code.
+- Application actions are asynchronous and emit structured `payment.created` and `payment.status_transitioned` logs.
+- Atomic commits: `9aefa8c`, `710eadd`, `0cd482b`, and `5a6729b` (with design and execution plans in `1789de3` and `3f155f7`).
+
+### Verification evidence — 2026-08-26
+
+- `bun install --frozen-lockfile`: 733 installs across 708 packages checked with no changes.
+- `bun run format:check`, `bun run lint`, `bun run typecheck`, and `bun run build`: exited successfully.
+- `bun run test -- payments`: 4 suites, 37 tests passed.
+- `bun run test`: 8 suites, 45 tests passed.
+- `bun run test:e2e -- payments`: 1 suite, 29 tests passed.
+- `bun run test:e2e`: 3 suites, 37 tests passed.
+- `/docs` rendered successfully in the in-app browser with all payment operations visible and no browser console warnings or errors.
 
 ---
 
