@@ -114,8 +114,12 @@
 - [ ] **Step 1: Install the NestJS throttler through Bun**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun add @nestjs/throttler@^6.5.1
+/Users/abdulafeezpifapp/.bun/bin/bun add @nestjs/throttler@^6.5.0
 ```
+
+`6.5.0` is the latest version published to the npm registry as of 2026-08-27,
+even though the upstream repository's `master` package metadata reports
+`6.5.1`.
 
 Expected: `package.json` and `bun.lock` change; no npm lockfile is created.
 
