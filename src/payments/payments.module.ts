@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { PaymentsController } from './api/payments.controller';
 import { PaymentsService } from './application/payments.service';
 import { InMemoryPaymentRepository } from './repositories/in-memory-payment.repository';
 import { PAYMENT_REPOSITORY } from './repositories/payment.repository';
 
 @Module({
+  controllers: [PaymentsController],
   providers: [
     PaymentsService,
     {

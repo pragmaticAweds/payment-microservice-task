@@ -1,0 +1,47 @@
+import { HttpStatus } from '@nestjs/common';
+import { PaymentNotFoundError } from '../../payments/application/payment-not-found.error';
+import {
+  InvalidPaymentError,
+  InvalidPaymentTransitionError,
+} from '../../payments/domain/payment.errors';
+
+export interface MappedApplicationError {
+  statusCode: number;
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+export function mapApplicationError(
+  exception: unknown,
+): MappedApplicationError | null {
+  if (exception instanceof InvalidPaymentError) {
+    return {
+      statusCode: HttpStatus.BAD_REQUEST,
+      code: exception.code,
+      message: exception.message,
+    };
+  }
+
+  if (exception instanceof PaymentNotFoundError) {
+    return {
+      statusCode: HttpStatus.NOT_FOUND,
+      code: exception.code,
+      message: exception.message,
+    };
+  }
+
+  if (exception instanceof InvalidPaymentTransitionError) {
+    return {
+      statusCode: HttpStatus.CONFLICT,
+      code: exception.code,
+      message: exception.message,
+      details: {
+        from: exception.from,
+        to: exception.to,
+      },
+    };
+  }
+
+  return null;
+}

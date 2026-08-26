@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { mapApplicationError } from './application-error.mapper';
 
 interface ErrorEnvelope {
   statusCode: number;
@@ -96,17 +97,38 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = http.getResponse<Response>();
     const requestId = getRequestId(request);
     const isHttpException = exception instanceof HttpException;
-    const statusCode = isHttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
-    const error = isHttpException
-      ? getHttpError(exception)
-      : {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'An unexpected error occurred',
-        };
+    const applicationError = mapApplicationError(exception);
+    let statusCode: number;
+    let error: Pick<ErrorEnvelope, 'code' | 'details' | 'message'>;
 
-    if (!isHttpException) {
+    if (isHttpException) {
+      statusCode = exception.getStatus();
+      error = getHttpError(exception);
+    } else if (applicationError !== null) {
+      statusCode = applicationError.statusCode;
+      error = {
+        code: applicationError.code,
+        message: applicationError.message,
+        ...(applicationError.details === undefined
+          ? {}
+          : { details: applicationError.details }),
+      };
+      this.logger.warn(
+        {
+          code: applicationError.code,
+          method: request.method,
+          path: request.originalUrl,
+          requestId,
+          statusCode,
+        },
+        'Request rejected by application rules',
+      );
+    } else {
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+      error = {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred',
+      };
       this.logger.error(
         {
           err:
