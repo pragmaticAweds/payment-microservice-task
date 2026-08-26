@@ -63,7 +63,7 @@ export class PaymentCreationIdempotencyService {
   async execute(
     idempotencyKey: string | undefined,
     input: CreatePaymentInput,
-    createPayment: () => Promise<Payment>,
+    createPayment: (validatedIdempotencyKey: string) => Promise<Payment>,
   ): Promise<IdempotentPaymentCreationResult> {
     const key = parseIdempotencyKey(idempotencyKey);
     const fingerprint = fingerprintPaymentInput(input);
@@ -103,7 +103,7 @@ export class PaymentCreationIdempotencyService {
     key: string,
     keyHash: string,
     fingerprint: string,
-    createPayment: () => Promise<Payment>,
+    createPayment: (validatedIdempotencyKey: string) => Promise<Payment>,
   ): Promise<IdempotentPaymentCreationResult> {
     const existingRecord = await this.repository.findByKey(key);
 
@@ -117,7 +117,7 @@ export class PaymentCreationIdempotencyService {
       return { payment: existingRecord.response, replayed: true };
     }
 
-    const payment = await createPayment();
+    const payment = await createPayment(key);
     await this.repository.save({
       key,
       fingerprint,

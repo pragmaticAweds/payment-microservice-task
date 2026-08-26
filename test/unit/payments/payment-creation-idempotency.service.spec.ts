@@ -54,6 +54,16 @@ describe('PaymentCreationIdempotencyService', () => {
     });
   });
 
+  it('passes the validated key to the fresh creation callback only', async () => {
+    const createPayment = jest.fn(() => Promise.resolve(Payment.create(input)));
+
+    await service.execute('checkout-key-007', input, createPayment);
+    await service.execute('checkout-key-007', input, createPayment);
+
+    expect(createPayment).toHaveBeenCalledTimes(1);
+    expect(createPayment).toHaveBeenCalledWith('checkout-key-007');
+  });
+
   it('replays the original response for the same key and canonical payload', async () => {
     let creationCount = 0;
     const createPayment = (): Promise<Payment> => {

@@ -5,6 +5,11 @@ import { PaymentCreationIdempotencyService } from '../../../src/payments/applica
 import { Payment } from '../../../src/payments/domain/payment';
 import { PaymentCurrency } from '../../../src/payments/domain/payment-status';
 import { PaymentsModule } from '../../../src/payments/payments.module';
+import { DeterministicPaymentOutcomeResolver } from '../../../src/payments/processing/deterministic-payment-outcome.resolver';
+import { PAYMENT_OUTCOME_RESOLVER } from '../../../src/payments/processing/payment-outcome-resolver';
+import { PaymentProcessor } from '../../../src/payments/processing/payment-processor';
+import { PROCESSING_SCHEDULER } from '../../../src/payments/processing/processing-scheduler';
+import { TimeoutProcessingScheduler } from '../../../src/payments/processing/timeout-processing.scheduler';
 import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
 import {
@@ -47,6 +52,16 @@ describe('PaymentsModule', () => {
     expect(moduleRef.get(PaymentCreationIdempotencyService)).toBeInstanceOf(
       PaymentCreationIdempotencyService,
     );
+  });
+
+  it('provides the processing adapters and coordinator', () => {
+    expect(moduleRef.get(PROCESSING_SCHEDULER)).toBeInstanceOf(
+      TimeoutProcessingScheduler,
+    );
+    expect(moduleRef.get(PAYMENT_OUTCOME_RESOLVER)).toBeInstanceOf(
+      DeterministicPaymentOutcomeResolver,
+    );
+    expect(moduleRef.get(PaymentProcessor)).toBeInstanceOf(PaymentProcessor);
   });
 
   afterAll(async () => {

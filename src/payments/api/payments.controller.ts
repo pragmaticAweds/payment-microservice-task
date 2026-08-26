@@ -25,6 +25,7 @@ import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
 import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
 import { PaymentsService } from '../application/payments.service';
 import type { Payment } from '../domain/payment';
+import { PaymentProcessor } from '../processing/payment-processor';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentDataResponseDto } from './dto/payment-response.dto';
 import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
@@ -55,6 +56,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly idempotencyService: PaymentCreationIdempotencyService,
+    private readonly paymentProcessor: PaymentProcessor,
   ) {}
 
   @Post()
@@ -93,7 +95,11 @@ export class PaymentsController {
     const result = await this.idempotencyService.execute(
       idempotencyKey,
       input,
-      () => this.paymentsService.create(input),
+      async (validatedIdempotencyKey) => {
+        const payment = await this.paymentsService.create(input);
+        this.paymentProcessor.schedule(payment, validatedIdempotencyKey);
+        return payment;
+      },
     );
 
     if (result.replayed) {

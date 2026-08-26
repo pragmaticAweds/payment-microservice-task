@@ -6,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
+import { PaymentProcessor } from '../src/payments/processing/payment-processor';
 
 interface PaymentResource {
   id: string;
@@ -97,7 +98,14 @@ describe('Payments API (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PaymentProcessor)
+      .useValue({
+        schedule: () => undefined,
+        isReady: () => true,
+        onApplicationShutdown: () => undefined,
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     configureApplication(app);
