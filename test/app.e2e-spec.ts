@@ -48,6 +48,15 @@ describe('AppController (e2e)', () => {
     );
   });
 
+  it('sets defensive HTTP response headers', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1')
+      .expect(200);
+
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+  });
+
   afterEach(async () => {
     await app.close();
   });
