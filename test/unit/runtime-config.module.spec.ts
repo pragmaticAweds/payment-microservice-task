@@ -16,9 +16,23 @@ describe('validateEnvironment', () => {
     });
   });
 
-  it('rejects invalid configuration with the field name', () => {
-    expect(() => validateEnvironment({ PROCESSING_DELAY_MS: '-1' })).toThrow(
-      'PROCESSING_DELAY_MS',
-    );
+  it.each([
+    [{ SIMULATED_SUCCESS_RATE: '-0.01' }, 'SIMULATED_SUCCESS_RATE'],
+    [{ SIMULATED_SUCCESS_RATE: '1.01' }, 'SIMULATED_SUCCESS_RATE'],
+    [{ PROCESSING_DELAY_MS: '-1' }, 'PROCESSING_DELAY_MS'],
+  ])('rejects invalid processing config %o', (config, field) => {
+    expect(() => validateEnvironment(config)).toThrow(field);
+  });
+
+  it('accepts processing configuration boundary values', () => {
+    expect(
+      validateEnvironment({
+        PROCESSING_DELAY_MS: '0',
+        SIMULATED_SUCCESS_RATE: '1',
+      }),
+    ).toMatchObject({
+      PROCESSING_DELAY_MS: 0,
+      SIMULATED_SUCCESS_RATE: 1,
+    });
   });
 });
