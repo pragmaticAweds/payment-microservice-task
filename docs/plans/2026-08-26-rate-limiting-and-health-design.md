@@ -142,10 +142,11 @@ two explicit signals:
   accepts schedules.
 
 The in-memory repository implements Nest's shutdown lifecycle and changes its
-readiness signal to `false` when shutdown begins. The processor already stops
-accepting work and returns `false` during shutdown. The health service evaluates
-both checks and catches repository-check failures so infrastructure errors do
-not escape as unhandled exceptions.
+readiness signal to `false` in `beforeApplicationShutdown`, before Nest closes
+the HTTP listener. The processor gains the same early signal while retaining
+its idempotent final cleanup hook. The health service evaluates both checks and
+catches repository-check failures so infrastructure errors do not escape as
+unhandled exceptions.
 
 When both dependencies are ready, the endpoint returns `200 OK`:
 
@@ -202,8 +203,8 @@ Rate-limit response headers are covered in endpoint metadata where applicable:
 
 ## Shutdown behavior
 
-Nest shutdown hooks notify both the repository and processor. Once shutdown
-begins:
+Nest's `beforeApplicationShutdown` hook notifies both the repository and
+processor before connections close. Once shutdown begins:
 
 1. the processor rejects new schedules and cancels timers;
 2. the repository marks itself not ready;
