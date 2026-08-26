@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { PinoLogger } from 'nestjs-pino';
-import { PaymentNotFoundError } from '../../../src/payments/application/payment-not-found.error';
 import { PaymentsService } from '../../../src/payments/application/payments.service';
 import { Payment } from '../../../src/payments/domain/payment';
 import {
@@ -19,14 +18,16 @@ describe('PaymentsService', () => {
   };
 
   let repository: jest.Mocked<PaymentRepository>;
+  let repositorySave: jest.MockedFunction<PaymentRepository['save']>;
   let logger: PinoLogger;
   let loggerInfo: jest.Mock;
   let service: PaymentsService;
 
   beforeEach(() => {
+    repositorySave = jest.fn().mockResolvedValue(undefined);
     repository = {
       findById: jest.fn(),
-      save: jest.fn().mockResolvedValue(undefined),
+      save: repositorySave,
     };
     loggerInfo = jest.fn();
     logger = { info: loggerInfo } as unknown as PinoLogger;
@@ -43,7 +44,7 @@ describe('PaymentsService', () => {
       description: 'Invoice 0001',
       status: PaymentStatus.PENDING,
     });
-    expect(repository.save).toHaveBeenCalledWith(payment);
+    expect(repositorySave).toHaveBeenCalledWith(payment);
   });
 
   it('logs a structured payment-created event without the description', async () => {
@@ -91,7 +92,7 @@ describe('PaymentsService', () => {
     expect(pending.status).toBe(PaymentStatus.PENDING);
     expect(processing).not.toBe(pending);
     expect(processing.status).toBe(PaymentStatus.PROCESSING);
-    expect(repository.save).toHaveBeenCalledWith(processing);
+    expect(repositorySave).toHaveBeenCalledWith(processing);
   });
 
   it('logs a structured status-transition event', async () => {
@@ -118,7 +119,7 @@ describe('PaymentsService', () => {
     await expect(
       service.transition(pending.id, PaymentStatus.SUCCEEDED),
     ).rejects.toBeInstanceOf(InvalidPaymentTransitionError);
-    expect(repository.save).not.toHaveBeenCalled();
+    expect(repositorySave).not.toHaveBeenCalled();
   });
 
   it('does not log a status transition rejected by the aggregate', async () => {

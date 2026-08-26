@@ -167,16 +167,19 @@ describe('Payments API (e2e)', () => {
     const createdBody = created.body as PaymentResponseBody;
 
     expect(created.headers['x-request-id']).toBe('create-payment-request');
+    expect(typeof createdBody.data.id).toBe('string');
+    expect(typeof createdBody.data.createdAt).toBe('string');
+    expect(typeof createdBody.data.updatedAt).toBe('string');
     expect(createdBody).toEqual({
       data: {
-        id: expect.any(String),
+        id: createdBody.data.id,
         smallestUnitAmount: 1050,
         currency: 'USD',
         merchantReference: 'order-2026-0001',
         description: 'Invoice 0001',
         status: 'pending',
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
+        createdAt: createdBody.data.createdAt,
+        updatedAt: createdBody.data.updatedAt,
       },
     });
     expect(Number.isNaN(Date.parse(createdBody.data.createdAt))).toBe(false);
@@ -288,22 +291,20 @@ describe('Payments API (e2e)', () => {
       .patch(path)
       .send({ status: 'processing' })
       .expect(200);
-    expect(processing.body).toEqual({
-      data: expect.objectContaining({
-        id,
-        status: 'processing',
-      }),
+    const processingBody = processing.body as PaymentResponseBody;
+    expect(processingBody.data).toMatchObject({
+      id,
+      status: 'processing',
     });
 
     const succeeded = await request(app.getHttpServer())
       .patch(path)
       .send({ status: 'succeeded' })
       .expect(200);
-    expect(succeeded.body).toEqual({
-      data: expect.objectContaining({
-        id,
-        status: 'succeeded',
-      }),
+    const succeededBody = succeeded.body as PaymentResponseBody;
+    expect(succeededBody.data).toMatchObject({
+      id,
+      status: 'succeeded',
     });
   });
 
@@ -321,11 +322,10 @@ describe('Payments API (e2e)', () => {
       .send({ status: 'failed' })
       .expect(200);
 
-    expect(failed.body).toEqual({
-      data: expect.objectContaining({
-        id,
-        status: 'failed',
-      }),
+    const failedBody = failed.body as PaymentResponseBody;
+    expect(failedBody.data).toMatchObject({
+      id,
+      status: 'failed',
     });
   });
 
@@ -476,38 +476,22 @@ describe('Payments API (e2e)', () => {
         ]),
       );
       for (const documentedResponse of Object.values(operation.responses)) {
-        expect(documentedResponse.headers).toEqual(
-          expect.objectContaining({
-            'x-request-id': expect.any(Object),
-          }),
-        );
+        expect(documentedResponse.headers).toHaveProperty('x-request-id');
       }
     }
 
     expect(create?.requestBody?.content['application/json']?.schema).toEqual({
       $ref: '#/components/schemas/CreatePaymentDto',
     });
-    expect(create?.responses).toEqual(
-      expect.objectContaining({
-        '201': expect.any(Object),
-        '400': expect.any(Object),
-      }),
-    );
-    expect(retrieve?.responses).toEqual(
-      expect.objectContaining({
-        '200': expect.any(Object),
-        '400': expect.any(Object),
-        '404': expect.any(Object),
-      }),
-    );
-    expect(transition?.responses).toEqual(
-      expect.objectContaining({
-        '200': expect.any(Object),
-        '400': expect.any(Object),
-        '404': expect.any(Object),
-        '409': expect.any(Object),
-      }),
-    );
+    expect(create?.responses).toHaveProperty('201');
+    expect(create?.responses).toHaveProperty('400');
+    expect(retrieve?.responses).toHaveProperty('200');
+    expect(retrieve?.responses).toHaveProperty('400');
+    expect(retrieve?.responses).toHaveProperty('404');
+    expect(transition?.responses).toHaveProperty('200');
+    expect(transition?.responses).toHaveProperty('400');
+    expect(transition?.responses).toHaveProperty('404');
+    expect(transition?.responses).toHaveProperty('409');
 
     const createSchema = document.components.schemas.CreatePaymentDto;
     expect(createSchema?.required).toEqual(
@@ -539,12 +523,10 @@ describe('Payments API (e2e)', () => {
       document.components.schemas.UpdatePaymentStatusDto?.properties?.status
         ?.enum,
     ).toEqual(['processing', 'succeeded', 'failed']);
-    expect(document.components.schemas).toEqual(
-      expect.objectContaining({
-        PaymentDataResponseDto: expect.any(Object),
-        PaymentResponseDto: expect.any(Object),
-        ErrorResponseDto: expect.any(Object),
-      }),
+    expect(document.components.schemas).toHaveProperty(
+      'PaymentDataResponseDto',
     );
+    expect(document.components.schemas).toHaveProperty('PaymentResponseDto');
+    expect(document.components.schemas).toHaveProperty('ErrorResponseDto');
   });
 });
