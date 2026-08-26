@@ -87,8 +87,8 @@ The exact number of commits may change when a checkpoint contains more than one 
 
 | Checkpoint | Description | Status |
 | --- | --- | --- |
-| 1 | Desktop workspace, Git, Bun, and `aweds-personal` binding | Awaiting user verification |
-| 2 | NestJS/Express scaffold and project boundaries | Not started |
+| 1 | Desktop workspace, Git, Bun, and `aweds-personal` binding | Completed |
+| 2 | NestJS/Express scaffold and project boundaries | Awaiting user verification |
 | 3 | Configuration, logging, validation, errors, and shutdown | Not started |
 | 4 | Payment domain, state machine, and persistence | Not started |
 | 5 | REST API and complete Swagger documentation | Not started |
@@ -158,8 +158,11 @@ git log --oneline --decorate -5
 
 ```bash
 bun install --frozen-lockfile
+bun run format:check
 bun run lint
 bun run typecheck
+bun run test
+bun run test:e2e
 bun run build
 ```
 
