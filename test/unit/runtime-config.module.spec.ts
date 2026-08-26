@@ -35,4 +35,35 @@ describe('validateEnvironment', () => {
       SIMULATED_SUCCESS_RATE: 1,
     });
   });
+
+  it.each([
+    ['10', '10'],
+    ['11', '10'],
+  ])(
+    'rejects payment creation limit %s when the general limit is %s',
+    (paymentCreateLimit, generalLimit) => {
+      expect(() =>
+        validateEnvironment({
+          PAYMENT_CREATE_THROTTLE_LIMIT: paymentCreateLimit,
+          THROTTLE_LIMIT: generalLimit,
+        }),
+      ).toThrow(
+        'PAYMENT_CREATE_THROTTLE_LIMIT: must be lower than THROTTLE_LIMIT',
+      );
+    },
+  );
+
+  it('accepts a payment creation limit lower than the general limit', () => {
+    expect(
+      validateEnvironment({
+        THROTTLE_TTL_MS: '5000',
+        THROTTLE_LIMIT: '4',
+        PAYMENT_CREATE_THROTTLE_LIMIT: '2',
+      }),
+    ).toMatchObject({
+      THROTTLE_TTL_MS: 5000,
+      THROTTLE_LIMIT: 4,
+      PAYMENT_CREATE_THROTTLE_LIMIT: 2,
+    });
+  });
 });
