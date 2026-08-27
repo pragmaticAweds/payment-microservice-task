@@ -10,7 +10,7 @@ export const environmentSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
       .default('info'),
-    PROCESSING_DELAY_MS: z.coerce.number().int().nonnegative().default(1000),
+    PROCESSING_DELAY_MS: z.coerce.number().int().nonnegative().default(60000),
     SIMULATED_SUCCESS_RATE: z.coerce.number().min(0).max(1).default(0.8),
     THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
     THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),

@@ -7,7 +7,7 @@ describe('validateEnvironment', () => {
       SERVICE_NAME: 'node-payment-microservice',
       PORT: 4040,
       LOG_LEVEL: 'info',
-      PROCESSING_DELAY_MS: 1000,
+      PROCESSING_DELAY_MS: 60_000,
       SIMULATED_SUCCESS_RATE: 0.8,
       THROTTLE_TTL_MS: 60_000,
       THROTTLE_LIMIT: 100,

@@ -164,7 +164,7 @@ service with a clear error instead of allowing a partially configured process.
 | `SERVICE_NAME`                  | `node-payment-microservice` | Service name attached to structured logs               |
 | `PORT`                          | `4040`                      | Integer from 1 through 65535                           |
 | `LOG_LEVEL`                     | `info`                      | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`  |
-| `PROCESSING_DELAY_MS`           | `1000`                      | Non-negative integer processing delay                  |
+| `PROCESSING_DELAY_MS`           | `60000`                     | Non-negative integer processing delay                  |
 | `SIMULATED_SUCCESS_RATE`        | `0.8`                       | Number from 0 through 1                                |
 | `THROTTLE_TTL_MS`               | `60000`                     | Positive global rate-limit window in milliseconds      |
 | `THROTTLE_LIMIT`                | `100`                       | Positive global request limit                          |
