@@ -1,9 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  successResponse,
-  type ApiSuccessResponse,
-} from './common/http/api-response';
+import { successResponse } from './common/api-response/api-response';
+import type { ApiSuccessResponse } from './common/api-response/api-response.types';
 import { AppResponseDto } from './app-response.dto';
 import { AppService, type ServiceInfo } from './app.service';
 

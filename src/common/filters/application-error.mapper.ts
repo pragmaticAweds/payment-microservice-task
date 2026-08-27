@@ -8,13 +8,7 @@ import {
   InvalidPaymentError,
   InvalidPaymentTransitionError,
 } from '../../payments/domain/payment.errors';
-
-export interface MappedApplicationError {
-  statusCode: number;
-  code: string;
-  message: string;
-  details?: unknown;
-}
+import type { MappedApplicationError } from './error.types';
 
 export function mapApplicationError(
   exception: unknown,

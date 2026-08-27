@@ -5,16 +5,14 @@ import {
   ThrottlerModuleOptions,
   ThrottlerOptions,
 } from '@nestjs/throttler';
-import {
-  PAYMENT_CREATION_RATE_LIMIT_METADATA,
-  PaymentCreationRateLimit,
-} from '../../../src/common/rate-limit/payment-creation-rate-limit.decorator';
+import { PaymentCreationRateLimit } from '../../../src/common/rate-limit/payment-creation-rate-limit.decorator';
 import { ApiThrottlerGuard } from '../../../src/common/rate-limit/api-throttler.guard';
 import {
-  createThrottlerOptions,
   DEFAULT_THROTTLER,
   PAYMENT_CREATE_THROTTLER,
-} from '../../../src/common/rate-limit/throttler.config';
+  PAYMENT_CREATION_RATE_LIMIT_METADATA,
+} from '../../../src/common/rate-limit/rate-limit.constants';
+import { createThrottlerOptions } from '../../../src/common/rate-limit/throttler.config';
 
 class TestHandlers {
   @PaymentCreationRateLimit()

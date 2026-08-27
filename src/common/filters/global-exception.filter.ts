@@ -7,26 +7,9 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { API_ERROR_STATUS } from '../http/api-response';
+import { API_ERROR_STATUS } from '../api-response/api-response.constants';
 import { mapApplicationError } from './application-error.mapper';
-
-interface ErrorEnvelope {
-  status: typeof API_ERROR_STATUS;
-  statusCode: number;
-  code: string;
-  message: string;
-  requestId: string;
-  timestamp: string;
-  path: string;
-  details?: unknown;
-}
-
-interface HttpErrorBody {
-  code?: unknown;
-  details?: unknown;
-  error?: unknown;
-  message?: unknown;
-}
+import type { ErrorEnvelope, HttpErrorBody } from './error.types';
 
 function normalizeErrorCode(value: string): string {
   return value

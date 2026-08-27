@@ -1,9 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import type { ThrottlerModuleOptions } from '@nestjs/throttler';
-import { PAYMENT_CREATION_RATE_LIMIT_METADATA } from './payment-creation-rate-limit.decorator';
-
-export const DEFAULT_THROTTLER = 'default';
-export const PAYMENT_CREATE_THROTTLER = 'payment-create';
+import {
+  DEFAULT_THROTTLER,
+  PAYMENT_CREATE_THROTTLER,
+  PAYMENT_CREATION_RATE_LIMIT_METADATA,
+} from './rate-limit.constants';
 
 export function createThrottlerOptions(
   config: ConfigService,

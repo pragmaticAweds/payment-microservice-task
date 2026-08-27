@@ -2,21 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { RequestMethod } from '@nestjs/common';
 import { Params } from 'nestjs-pino';
-
-export const REQUEST_ID_HEADER = 'x-request-id';
-
-interface LoggerEnvironment {
-  NODE_ENV: 'development' | 'test' | 'production';
-  SERVICE_NAME: string;
-  LOG_LEVEL: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
-}
-
-const SENSITIVE_LOG_PATHS = [
-  'req.headers.authorization',
-  'req.headers.cookie',
-  'req.headers["idempotency-key"]',
-  'req.body.*',
-];
+import { REQUEST_ID_HEADER, SENSITIVE_LOG_PATHS } from './logger.constants';
+import type { LoggerEnvironment } from './logger.types';
 
 function getRequestId(request: IncomingMessage): string {
   const header = request.headers[REQUEST_ID_HEADER];

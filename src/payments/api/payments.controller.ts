@@ -22,10 +22,8 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import {
-  successResponse,
-  type ApiSuccessResponse,
-} from '../../common/http/api-response';
+import { successResponse } from '../../common/api-response/api-response';
+import type { ApiSuccessResponse } from '../../common/api-response/api-response.types';
 import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
 import { PaymentCreationRateLimit } from '../../common/rate-limit/payment-creation-rate-limit.decorator';
 import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';

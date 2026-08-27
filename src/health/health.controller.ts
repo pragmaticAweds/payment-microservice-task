@@ -6,23 +6,16 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
-import {
-  successResponse,
-  type ApiSuccessResponse,
-} from '../common/http/api-response';
+import { successResponse } from '../common/api-response/api-response';
+import type { ApiSuccessResponse } from '../common/api-response/api-response.types';
+import { REQUEST_ID_RESPONSE_HEADERS } from '../common/openapi/openapi.constants';
 import {
   HealthLivenessResponseDto,
   HealthNotReadyResponseDto,
   HealthReadinessResponseDto,
 } from './dto/health-response.dto';
-import { HealthService, type HealthReadinessData } from './health.service';
-
-const REQUEST_ID_RESPONSE_HEADERS = {
-  'x-request-id': {
-    description: 'Effective request correlation identifier',
-    schema: { type: 'string' },
-  },
-} as const;
+import { HealthService } from './health.service';
+import type { HealthReadinessData } from './health.types';
 
 @ApiTags('Health')
 @Controller('health')

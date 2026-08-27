@@ -1,9 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { RequestMethod } from '@nestjs/common';
-import {
-  createLoggerOptions,
-  REQUEST_ID_HEADER,
-} from '../../src/common/logger.config';
+import { createLoggerOptions } from '../../src/common/logger/logger.config';
+import { REQUEST_ID_HEADER } from '../../src/common/logger/logger.constants';
 
 interface LoggerCallbacks {
   autoLogging: boolean;

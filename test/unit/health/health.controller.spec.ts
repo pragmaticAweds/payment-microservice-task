@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { HealthController } from '../../../src/health/health.controller';
-import type { HealthReadinessData } from '../../../src/health/health.service';
 import { HealthService } from '../../../src/health/health.service';
+import type { HealthReadinessData } from '../../../src/health/health.types';
 
 const THROTTLER_SKIP_METADATA = 'THROTTLER:SKIP';
 
