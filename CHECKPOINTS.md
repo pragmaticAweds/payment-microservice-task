@@ -22,7 +22,7 @@ This checklist governs the implementation of the NestJS payment-processing asses
 - Logging: structured Pino logging with correlation IDs and redaction
 - Tests: Jest and Supertest, executed through Bun
 - Persistence: in-memory repositories behind explicit interfaces
-- Required operational features: rate limiting, liveness/readiness, graceful shutdown, Docker, and CI
+- Required operational features: rate limiting, liveness/readiness, and graceful shutdown
 
 ## Git workflow
 
@@ -49,8 +49,6 @@ feat(idempotency): prevent duplicate payment creation
 fix(processing): persist failed asynchronous outcomes
 test(payments): cover invalid status transitions
 docs(readme): document local payment processing flow
-build(docker): add multi-stage Bun runtime image
-ci(github): verify the service with Bun
 ```
 
 Rules:
@@ -78,26 +76,26 @@ Rules:
 | 7          | `feat(processing): simulate deterministic async outcomes`                                                                                                       |
 | 8          | `feat(rate-limit): protect payment endpoints`; `feat(health): add readiness and liveness probes`                                                                |
 | 9          | `test(e2e): cover payment service flows`; `test(coverage): enforce coverage thresholds`                                                                         |
-| 10         | `build(docker): add multi-stage Bun image`; `ci(github): verify the service with Bun`; `docs(readme): document setup and architecture`                          |
+| 10         | `docs(readme): document payment microservice`; `docs(checkpoints): record checkpoint 10 verification`                                                           |
 | 11         | No commit unless final verification requires a tracked correction; remote configuration itself is repository-local metadata.                                    |
 
 The exact number of commits may change when a checkpoint contains more than one independently reviewable change, but the atomicity rules do not change.
 
 ## Progress summary
 
-| Checkpoint | Description                                              | Status      |
-| ---------- | -------------------------------------------------------- | ----------- |
-| 1          | Local workspace, Git, and Bun                            | Completed   |
-| 2          | NestJS/Express scaffold and project boundaries           | Completed   |
-| 3          | Configuration, logging, validation, errors, and shutdown | Completed   |
-| 4          | Payment domain, state machine, and persistence           | Completed   |
-| 5          | REST API and complete Swagger documentation              | Completed   |
-| 6          | Concurrency-safe idempotency                             | Completed   |
-| 7          | Asynchronous deterministic payment processing            | Completed   |
-| 8          | Rate limiting and health endpoints                       | Completed   |
-| 9          | Jest unit/e2e tests and coverage enforcement             | Completed   |
-| 10         | README and final documentation verification              | Not started |
-| 11         | GitHub remote verification and approved publication      | Not started |
+| Checkpoint | Description                                              | Status                     |
+| ---------- | -------------------------------------------------------- | -------------------------- |
+| 1          | Local workspace, Git, and Bun                            | Completed                  |
+| 2          | NestJS/Express scaffold and project boundaries           | Completed                  |
+| 3          | Configuration, logging, validation, errors, and shutdown | Completed                  |
+| 4          | Payment domain, state machine, and persistence           | Completed                  |
+| 5          | REST API and complete Swagger documentation              | Completed                  |
+| 6          | Concurrency-safe idempotency                             | Completed                  |
+| 7          | Asynchronous deterministic payment processing            | Completed                  |
+| 8          | Rate limiting and health endpoints                       | Completed                  |
+| 9          | Jest unit/e2e tests and coverage enforcement             | Completed                  |
+| 10         | README and final documentation verification              | Awaiting user verification |
+| 11         | GitHub remote verification and approved publication      | Not started                |
 
 ---
 
@@ -513,13 +511,60 @@ bun run test:cov
 
 ```bash
 bun install --frozen-lockfile
+bun run format:check
 bun run lint
 bun run typecheck
 bun run test
 bun run test:e2e
+bun run test:e2e -- --runInBand --detectOpenHandles
 bun run test:cov
 bun run build
 ```
+
+### Implementation evidence
+
+- The README documents the architecture, module boundaries, payment lifecycle,
+  asynchronous event-loop behavior, atomic transitions, and injectable adapters.
+- Setup uses the portable `/node-payment-microservice` project root and Bun 1.3.8
+  commands without recording machine-specific paths.
+- The configuration table matches every Zod default and constraint, including
+  the stricter payment-creation limit and the current idempotency-retention
+  limitation.
+- API examples cover `smallestUnitAmount` as US cents, USD-only currency,
+  merchant references, descriptions, header-based idempotency, retrieval, and
+  manual state transitions.
+- Operational documentation covers global and creation rate limits, unversioned
+  liveness/readiness, Swagger UI and JSON, the error envelope, request
+  correlation, Pino levels, and redaction.
+- Testing documentation lists the unit, E2E, open-handle, coverage, formatting,
+  linting, type-checking, and build commands plus the enforced thresholds.
+- Assumptions and production trade-offs clearly identify the memory-resident
+  adapters, process-local coordination, local timers, and excluded infrastructure.
+- Atomic README commit: `8f9defb docs(readme): document payment microservice`.
+
+### Verification evidence — 2026-08-27
+
+- `bun install --frozen-lockfile`: Bun 1.3.8 checked 734 installs across 709
+  packages with no changes.
+- `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run build`,
+  and `git diff --check`: exited successfully.
+- `bun run test`: 19 suites, 129 tests passed.
+- `bun run test:e2e`: 6 suites, 61 tests passed.
+- `bun run test:e2e -- --runInBand --detectOpenHandles`: 6 suites, 61 tests
+  passed with no reported open handles.
+- `bun run test:cov`: 19 suites, 129 tests passed at 97.91% statements, 84.83%
+  branches, 95.74% functions, and 97.76% lines; LCOV and HTML output were
+  generated, verified as ignored, and moved out of the repository afterward.
+- The compiled service started with `bun run start:prod`; `/api/v1`,
+  `/health/live`, `/health/ready`, and `/docs-json` returned `200`.
+- A live payment request returned `201` with `pending`; the same key and payload
+  returned the original response with `Idempotency-Replayed: true`; retrieval
+  returned the deterministic terminal `succeeded` state.
+- OpenAPI JSON parsed as version 3.0.0 and contained every documented payment and
+  health path without a versioned health route.
+- Both temporary runtime processes were stopped, leaving no verification listener.
+- Documentation contains no machine-specific workspace path or account binding.
+- Verification ran on `codex/feat/payment-microservice` with no Git remote.
 
 ---
 
@@ -529,7 +574,6 @@ bun run build
 
 - Determine and verify the intended personal GitHub account and repository name.
 - Configure the Git remote using the verified account/repository.
-- Verify authentication and remote visibility without exposing credentials.
 - Push only after explicit user approval at this checkpoint.
 
 ### Acceptance criteria
@@ -545,5 +589,5 @@ bun run build
 ```bash
 git status --short --branch
 git remote -v
-git log -1 --show-signature --format=fuller
+git log -1 --format=fuller
 ```
