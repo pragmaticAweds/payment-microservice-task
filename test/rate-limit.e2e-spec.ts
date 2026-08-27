@@ -211,6 +211,34 @@ describe('Rate limiting (e2e)', () => {
     ).toBeUndefined();
   });
 
+  it.each([
+    ['/health/live', { data: { status: 'live' } }],
+    [
+      '/health/ready',
+      {
+        data: {
+          status: 'ready',
+          checks: { repository: 'ready', processor: 'ready' },
+        },
+      },
+    ],
+  ] as const)(
+    'keeps %s exempt after more requests than the general limit',
+    async (path, expectedBody) => {
+      for (let requestNumber = 1; requestNumber <= 5; requestNumber += 1) {
+        const response = await request(app!.getHttpServer())
+          .get(path)
+          .expect(200);
+
+        expect(response.body).toEqual(expectedBody);
+        expect(response.headers['x-ratelimit-limit']).toBeUndefined();
+        expect(
+          response.headers['x-ratelimit-limit-payment-create'],
+        ).toBeUndefined();
+      }
+    },
+  );
+
   it('documents payment creation rate limits and the standard 429 schema', async () => {
     const response = await request(app!.getHttpServer())
       .get('/docs-json')

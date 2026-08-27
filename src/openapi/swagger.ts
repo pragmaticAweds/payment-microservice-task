@@ -9,6 +9,7 @@ export function configureSwagger(app: INestApplication): void {
     )
     .setVersion('1.0.0')
     .addTag('Payments', 'Payment creation, retrieval, and state transitions')
+    .addTag('Health', 'Service liveness and payment-work readiness probes')
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
