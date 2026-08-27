@@ -454,7 +454,8 @@ The unit suite emits text, LCOV, and HTML coverage reports. Global thresholds ar
 
 End-to-end tests are a separate mandatory gate. They exercise the application
 through HTTP while controlled scheduler implementations avoid real waits and
-random outcomes.
+random outcomes. Jest runs the E2E files serially to keep their independently
+bootstrapped Nest applications deterministic on constrained assessment runners.
 
 ## Assumptions and production trade-offs
 
@@ -471,4 +472,5 @@ random outcomes.
   assessment's scope.
 
 See [`CHECKPOINTS.md`](./CHECKPOINTS.md) for the sequential implementation and
-verification record.
+verification record. See [`AI_USAGE.md`](./AI_USAGE.md) for the complete
+AI-assistance prompt and command disclosure required with the submission.
