@@ -17,7 +17,13 @@ describe('InMemoryPaymentRepository', () => {
   let repository: InMemoryPaymentRepository;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-27T12:00:00.000Z'));
     repository = new InMemoryPaymentRepository();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('creates and retrieves a payment by ID', async () => {
