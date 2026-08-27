@@ -85,19 +85,19 @@ The exact number of commits may change when a checkpoint contains more than one 
 
 ## Progress summary
 
-| Checkpoint | Description                                              | Status                     |
-| ---------- | -------------------------------------------------------- | -------------------------- |
-| 1          | Local workspace, Git, and Bun                            | Completed                  |
-| 2          | NestJS/Express scaffold and project boundaries           | Completed                  |
-| 3          | Configuration, logging, validation, errors, and shutdown | Completed                  |
-| 4          | Payment domain, state machine, and persistence           | Completed                  |
-| 5          | REST API and complete Swagger documentation              | Completed                  |
-| 6          | Concurrency-safe idempotency                             | Completed                  |
-| 7          | Asynchronous deterministic payment processing            | Completed                  |
-| 8          | Rate limiting and health endpoints                       | Completed                  |
-| 9          | Jest unit/e2e tests and coverage enforcement             | Awaiting user verification |
-| 10         | Docker, CI, README, and final local verification         | Not started                |
-| 11         | GitHub remote verification and approved publication      | Not started                |
+| Checkpoint | Description                                              | Status      |
+| ---------- | -------------------------------------------------------- | ----------- |
+| 1          | Local workspace, Git, and Bun                            | Completed   |
+| 2          | NestJS/Express scaffold and project boundaries           | Completed   |
+| 3          | Configuration, logging, validation, errors, and shutdown | Completed   |
+| 4          | Payment domain, state machine, and persistence           | Completed   |
+| 5          | REST API and complete Swagger documentation              | Completed   |
+| 6          | Concurrency-safe idempotency                             | Completed   |
+| 7          | Asynchronous deterministic payment processing            | Completed   |
+| 8          | Rate limiting and health endpoints                       | Completed   |
+| 9          | Jest unit/e2e tests and coverage enforcement             | Completed   |
+| 10         | README and final documentation verification              | Not started |
+| 11         | GitHub remote verification and approved publication      | Not started |
 
 ---
 
@@ -495,25 +495,19 @@ bun run test:cov
 
 ---
 
-## Checkpoint 10 — Docker, CI, documentation, and final local verification
+## Checkpoint 10 — README and final documentation verification
 
 ### Work
 
-- Add a Bun-based multi-stage Dockerfile.
-- Install/build in the builder stage and copy only runtime requirements into the final stage.
-- Run the service as a non-root user.
-- Add `.dockerignore` and a container health check.
-- Add Bun-powered CI for install, lint, type-check, tests, coverage, and build.
-- Write a complete README with architecture, setup, configuration, API examples, test commands, Docker usage, assumptions, and production trade-offs.
-- Perform a clean-install verification from the committed files.
+- Write a complete README with architecture, setup, configuration, API examples, idempotency, asynchronous processing, rate limiting, health endpoints, Swagger, error handling, logging, test commands, coverage thresholds, assumptions, and production trade-offs.
+- Verify that every command and HTTP contract documented in the README matches the committed implementation.
 
 ### Acceptance criteria
 
-- The Docker image builds successfully.
-- The container starts and passes its health check.
+- The README accurately explains the service architecture and payment lifecycle.
+- Setup, configuration, API, error, health, and Swagger examples match the implementation.
 - All documented commands work exactly as written.
-- CI configuration uses the pinned Bun version.
-- Lint, type-check, tests, coverage, and build all pass from a clean installation.
+- Lint, type-check, tests, coverage, and build pass from the committed files.
 
 ### Verification
 
@@ -525,7 +519,6 @@ bun run test
 bun run test:e2e
 bun run test:cov
 bun run build
-docker build -t node-payment-microservice .
 ```
 
 ---
