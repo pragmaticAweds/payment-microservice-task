@@ -94,7 +94,7 @@ The exact number of commits may change when a checkpoint contains more than one 
 | 5          | REST API and complete Swagger documentation               | Completed                  |
 | 6          | Concurrency-safe idempotency                              | Completed                  |
 | 7          | Asynchronous deterministic payment processing             | Completed                  |
-| 8          | Rate limiting and health endpoints                        | Awaiting user verification |
+| 8          | Rate limiting and health endpoints                        | Completed                  |
 | 9          | Jest unit/e2e tests and coverage enforcement              | Not started                |
 | 10         | Docker, CI, README, and final local verification          | Not started                |
 | 11         | GitHub remote verification and approved publication       | Not started                |
