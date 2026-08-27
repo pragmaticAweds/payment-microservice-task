@@ -67,37 +67,37 @@ Rules:
 
 ### Planned atomic commit map
 
-| Checkpoint | Planned commit messages |
-| --- | --- |
-| 1 | `chore(repo): initialize Bun payment service workspace` |
-| 2 | `chore(scaffold): create NestJS Express application` |
-| 3 | `feat(config): validate runtime configuration with Zod`; `feat(observability): add structured request logging`; `feat(errors): standardize API error responses` |
-| 4 | `feat(payments): add payment domain and in-memory repository` |
-| 5 | `feat(api): expose versioned payment endpoints`; `docs(swagger): document the payment API` |
-| 6 | `feat(idempotency): make payment creation replay-safe` |
-| 7 | `feat(processing): simulate deterministic async outcomes` |
-| 8 | `feat(rate-limit): protect payment endpoints`; `feat(health): add readiness and liveness probes` |
-| 9 | `test(e2e): cover payment service flows`; `test(coverage): enforce coverage thresholds` |
-| 10 | `build(docker): add multi-stage Bun image`; `ci(github): verify the service with Bun`; `docs(readme): document setup and architecture` |
-| 11 | No commit unless final verification requires a tracked correction; remote configuration itself is repository-local metadata. |
+| Checkpoint | Planned commit messages                                                                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1          | `chore(repo): initialize Bun payment service workspace`                                                                                                         |
+| 2          | `chore(scaffold): create NestJS Express application`                                                                                                            |
+| 3          | `feat(config): validate runtime configuration with Zod`; `feat(observability): add structured request logging`; `feat(errors): standardize API error responses` |
+| 4          | `feat(payments): add payment domain and in-memory repository`                                                                                                   |
+| 5          | `feat(api): expose versioned payment endpoints`; `docs(swagger): document the payment API`                                                                      |
+| 6          | `feat(idempotency): make payment creation replay-safe`                                                                                                          |
+| 7          | `feat(processing): simulate deterministic async outcomes`                                                                                                       |
+| 8          | `feat(rate-limit): protect payment endpoints`; `feat(health): add readiness and liveness probes`                                                                |
+| 9          | `test(e2e): cover payment service flows`; `test(coverage): enforce coverage thresholds`                                                                         |
+| 10         | `build(docker): add multi-stage Bun image`; `ci(github): verify the service with Bun`; `docs(readme): document setup and architecture`                          |
+| 11         | No commit unless final verification requires a tracked correction; remote configuration itself is repository-local metadata.                                    |
 
 The exact number of commits may change when a checkpoint contains more than one independently reviewable change, but the atomicity rules do not change.
 
 ## Progress summary
 
-| Checkpoint | Description | Status |
-| --- | --- | --- |
-| 1 | Desktop workspace, Git, Bun, and `aweds-personal` binding | Completed |
-| 2 | NestJS/Express scaffold and project boundaries | Completed |
-| 3 | Configuration, logging, validation, errors, and shutdown | Completed |
-| 4 | Payment domain, state machine, and persistence | Completed |
-| 5 | REST API and complete Swagger documentation | Completed |
-| 6 | Concurrency-safe idempotency | Completed |
-| 7 | Asynchronous deterministic payment processing | Awaiting user verification |
-| 8 | Rate limiting and health endpoints | Not started |
-| 9 | Jest unit/e2e tests and coverage enforcement | Not started |
-| 10 | Docker, CI, README, and final local verification | Not started |
-| 11 | GitHub remote verification and approved publication | Not started |
+| Checkpoint | Description                                               | Status                     |
+| ---------- | --------------------------------------------------------- | -------------------------- |
+| 1          | Desktop workspace, Git, Bun, and `aweds-personal` binding | Completed                  |
+| 2          | NestJS/Express scaffold and project boundaries            | Completed                  |
+| 3          | Configuration, logging, validation, errors, and shutdown  | Completed                  |
+| 4          | Payment domain, state machine, and persistence            | Completed                  |
+| 5          | REST API and complete Swagger documentation               | Completed                  |
+| 6          | Concurrency-safe idempotency                              | Completed                  |
+| 7          | Asynchronous deterministic payment processing             | Completed                  |
+| 8          | Rate limiting and health endpoints                        | Awaiting user verification |
+| 9          | Jest unit/e2e tests and coverage enforcement              | Not started                |
+| 10         | Docker, CI, README, and final local verification          | Not started                |
+| 11         | GitHub remote verification and approved publication       | Not started                |
 
 ---
 
@@ -409,6 +409,35 @@ bun run test -- health throttler
 bun run test:e2e -- health rate-limit
 bun run typecheck
 ```
+
+### Implementation evidence
+
+- Zod validates the named `default` and `payment-create` throttling policies, including the rule that payment creation must use the stricter limit.
+- The global throttler guard returns the standard `429 TOO_MANY_REQUESTS` error envelope and accurate standard limit, remaining, reset, and retry headers for the policy that was exhausted while retaining named-policy headers.
+- A controller metadata marker applies `payment-create` only to `POST /api/v1/payments`; retrieval and other handlers remain on the default policy.
+- Both liveness and readiness explicitly skip the `default` and `payment-create` policies, so probes remain available after normal API limits are exhausted.
+- `GET /health/live` is an unversioned process-only probe. `GET /health/ready` composes the repository and processor readiness signals and returns a safe structured `503 SERVICE_NOT_READY` response when either signal is unavailable, false, or throws.
+- Readiness failures emit structured warning/error logs without exposing internal exception details in the client response.
+- Shutdown is two-phase and race-safe: the early hook makes readiness false while allowing already-admitted creations to finish scheduling; final shutdown rejects new schedules, cancels queued timers, drains tracked asynchronous callbacks, and prevents canceled work from being stranded in `processing`.
+- Swagger includes the `Health` tag, unversioned liveness/readiness success contracts, the readiness `503` contract, payment-create rate-limit headers and `429` response, and the same contracts in `/docs-json`.
+- Design and plan commits: `1f1f71a docs(operations): define rate limiting and health checks`; `7d4b33c docs(operations): add rate limiting and health plan`; `b7a76d0 docs(operations): use published throttler release`.
+- Rate-limit implementation and corrections: `44414f0 feat(rate-limit): configure global request throttling`; `45da20e fix(rate-limit): expose standard limit headers`; `725ce70 feat(rate-limit): protect payment creation`; `351680b fix(swagger): document throttled limit headers`.
+- Readiness and shutdown implementation, design corrections, and race fixes: `81de7db feat(health): expose payment readiness signals`; `6b02402 docs(operations): clarify shutdown draining`; `92e123a fix(processing): drain work during shutdown`; `fbfdb1d docs(operations): define shutdown admission draining`; `8a63ef9 fix(processing): finalize canceled completions`; `929e930 fix(processing): drain admitted creations`.
+- Health implementation and exemption regression coverage: `41b2fa1 feat(health): add readiness and liveness probes`; `e857957 test(health): verify named throttle exemptions`.
+
+### Verification evidence — 2026-08-27
+
+- `bun install --frozen-lockfile`: Bun 1.3.8 checked 734 installs across 709 packages with no changes; `package.json` and `bun.lock` hashes remained unchanged.
+- `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run build`, and `git diff --check`: exited successfully.
+- `bun run test -- health throttler repository`: 5 suites, 21 tests passed.
+- `bun run test:e2e -- health rate-limit`: 2 suites, 11 tests passed.
+- `bun run test`: 16 suites, 106 tests passed.
+- `bun run test:e2e`: 6 suites, 59 tests passed.
+- `bun run test:e2e -- --detectOpenHandles`: 6 suites, 59 tests passed with no open-handle or unhandled-rejection warnings.
+- A built service started through Bun on `PORT=3108`: `/health/live` returned `200 {"data":{"status":"live"}}`; `/health/ready` returned `200 {"data":{"status":"ready","checks":{"repository":"ready","processor":"ready"}}}`; `/api/v1/health/live` returned the standard `404 NOT_FOUND` envelope; `/docs-json` returned `200`.
+- The downloaded document parsed as OpenAPI 3.0.0, contained `/health/live` and `/health/ready` but no `/api/v1/health/*` path, documented `429` on `POST /api/v1/payments`, documented liveness `200` and readiness `200`/`503`, and included the `Health` tag.
+- The runtime process was stopped after verification and left no listener on port 3108.
+- Verification ran on `codex/feat/payment-microservice` with a clean worktree, no Git remote, and the repository-local SSH command still bound to `aweds-personal`; no private-key contents were read or displayed.
 
 ---
 
