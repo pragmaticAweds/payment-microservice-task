@@ -1,4 +1,4 @@
-import { AppService } from '../../src/app.service';
+import { AppService } from '../../../src/app/app.service';
 
 describe('AppService', () => {
   it('identifies the running payment microservice', () => {

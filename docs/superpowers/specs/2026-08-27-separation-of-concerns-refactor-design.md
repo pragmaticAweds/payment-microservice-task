@@ -113,7 +113,9 @@ cross-feature coupling. This approach is rejected.
 ### Application root
 
 - Keep route/version values in `src/api.constants.ts`.
-- Move `ServiceInfo` from `app.service.ts` to `src/app.types.ts`.
+- Group the multi-file application concern beneath `src/app/`, including its
+  controller, service, module, setup, response DTO, REST request, and types.
+- Move `ServiceInfo` from `app.service.ts` to `src/app/app.types.ts`.
 
 ### Common boundary
 

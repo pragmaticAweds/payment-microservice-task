@@ -459,12 +459,19 @@ git commit -m "refactor(payments): separate API and processing definitions"
 
 **Files:**
 
-- Create: `src/app.types.ts`
+- Create: `src/app/`
+- Move: `src/app.controller.ts` to `src/app/app.controller.ts`
+- Move: `src/app.service.ts` to `src/app/app.service.ts`
+- Move: `src/app.module.ts` to `src/app/app.module.ts`
+- Move: `src/app.setup.ts` to `src/app/app.setup.ts`
+- Move: `src/app-response.dto.ts` to `src/app/app-response.dto.ts`
+- Move: `src/app.controller.rest` to `src/app/app.controller.rest`
+- Create: `src/app/app.types.ts`
 - Create: `src/startup/startup.types.ts`
 - Create: `src/startup/startup.constants.ts`
-- Modify: `src/app.service.ts`
-- Modify: `src/app.controller.ts`
+- Modify: `src/main.ts`
 - Modify: `src/startup/startup-log.ts`
+- Modify: application unit/E2E imports and coverage configuration
 - Create: `test/unit/architecture/source-structure.spec.ts`
 
 **Interfaces:**
@@ -510,7 +517,7 @@ Expected: FAIL because `ServiceInfo`, `StartupApplication`, and
 
 - [ ] **Step 3: Extract the remaining root/startup definitions**
 
-Create `app.types.ts`:
+Create `app/app.types.ts`:
 
 ```ts
 export interface ServiceInfo {
@@ -527,7 +534,8 @@ export const STARTUP_EVENT = 'service.started' as const;
 export const STARTUP_LOG_MESSAGE = 'Payment service listening';
 ```
 
-Update direct imports and keep startup ordering unchanged.
+Move every `app.*` concern file beneath `src/app/`, update direct imports, and
+keep startup ordering unchanged.
 
 - [ ] **Step 4: Verify the architecture test is GREEN**
 
@@ -546,7 +554,7 @@ Expected: every command passes; no structure violations remain.
 - [ ] **Step 5: Commit architecture enforcement**
 
 ```bash
-git add src/app.types.ts src/app.service.ts src/app.controller.ts src/startup test/unit/architecture/source-structure.spec.ts
+git add src/app src/main.ts src/startup jest.config.cjs test README.md CHECKPOINTS.md docs
 git commit -m "test(architecture): enforce production definition separation"
 ```
 

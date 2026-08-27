@@ -71,6 +71,7 @@ another in this single-process implementation.
 ```text
 /node-payment-microservice
 ├── src
+│   ├── app
 │   ├── common
 │   ├── config
 │   ├── health
@@ -90,6 +91,15 @@ static values, and TypeScript-only shapes use matching filenames inside the
 same concern-owned parent:
 
 ```text
+app/
+├── app.controller.ts
+├── app.service.ts
+├── app.module.ts
+├── app.setup.ts
+├── app.types.ts
+├── app-response.dto.ts
+└── app.controller.rest
+
 common/api-response/
 ├── api-response.ts
 ├── api-response.constants.ts
@@ -408,7 +418,7 @@ The post-bind startup event is `service.started`; it includes the effective
 
 Runnable HTTP requests are stored beside their controllers:
 
-- [`src/app.controller.rest`](./src/app.controller.rest)
+- [`src/app/app.controller.rest`](./src/app/app.controller.rest)
 - [`src/health/health.controller.rest`](./src/health/health.controller.rest)
 - [`src/payments/api/payments.controller.rest`](./src/payments/api/payments.controller.rest)
 

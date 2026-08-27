@@ -4,7 +4,7 @@ module.exports = {
     'src/**/*.{ts,js}',
     '!src/main.ts',
     '!src/**/*.module.ts',
-    '!src/app.setup.ts',
+    '!src/app/app.setup.ts',
     '!src/openapi/swagger.ts',
     '!src/**/*.dto.ts',
   ],

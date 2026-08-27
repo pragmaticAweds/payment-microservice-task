@@ -4,8 +4,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { Response } from 'superagent';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApplication } from '../src/app.setup';
+import { AppModule } from '../src/app/app.module';
+import { configureApplication } from '../src/app/app.setup';
 import type { PaymentCreationAdmission } from '../src/payments/processing/payment-processing.types';
 import { PaymentProcessor } from '../src/payments/processing/payment-processor';
 

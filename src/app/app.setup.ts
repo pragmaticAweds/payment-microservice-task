@@ -1,7 +1,7 @@
 import { INestApplication, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
-import { API_PREFIX, API_VERSION } from './api.constants';
-import { configureSwagger } from './openapi/swagger';
+import { API_PREFIX, API_VERSION } from '../api.constants';
+import { configureSwagger } from '../openapi/swagger';
 
 export function configureApplication(app: INestApplication): void {
   app.use(helmet());

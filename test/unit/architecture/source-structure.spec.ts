@@ -49,6 +49,15 @@ describe('production source structure', () => {
         true,
       );
 
+      if (
+        pathSegments.length === 1 &&
+        /^app(?:[.-])/u.test(pathSegments[0] ?? '')
+      ) {
+        violations.push(
+          `${relativePath}: app concern file outside the app parent folder`,
+        );
+      }
+
       for (const directoryName of pathSegments.slice(0, -1)) {
         if (DEFINITION_DIRECTORY_NAMES.has(directoryName)) {
           violations.push(

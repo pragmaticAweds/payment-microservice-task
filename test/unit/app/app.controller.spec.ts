@@ -1,5 +1,5 @@
-import { AppController } from '../../src/app.controller';
-import type { ServiceInfo } from '../../src/app.types';
+import { AppController } from '../../../src/app/app.controller';
+import type { ServiceInfo } from '../../../src/app/app.types';
 
 describe('AppController', () => {
   it('returns service information from AppService', () => {
