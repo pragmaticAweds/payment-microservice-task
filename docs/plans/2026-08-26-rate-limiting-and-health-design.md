@@ -145,10 +145,14 @@ The in-memory repository implements Nest's shutdown lifecycle and changes its
 readiness signal to `false` in `beforeApplicationShutdown`, before Nest closes
 the HTTP listener. Its `save` and `findById` methods remain available so work
 admitted before draining began can finish. The processor exposes the same early
-readiness signal, but does not reject a schedule or cancel work until Nest has
-closed connections and invokes the final shutdown hook. The health service
-evaluates both checks and catches repository-check failures so infrastructure
-errors do not escape as unhandled exceptions.
+readiness signal. Payment creation acquires a processor-owned admission lease
+before entering idempotency execution; that lease covers payment persistence,
+processing schedule registration, and idempotency-record persistence. The
+final shutdown hook closes new admissions synchronously and waits for existing
+leases rather than treating HTTP connection disposal or provider hook order as
+the work barrier. The health service evaluates both checks and catches
+repository-check failures so infrastructure errors do not escape as unhandled
+exceptions.
 
 When both dependencies are ready, the endpoint returns `200 OK`:
 
@@ -212,16 +216,26 @@ Shutdown is deliberately split across Nest's two lifecycle phases:
    It does not reject processor schedules, cancel timer handles, or disable
    repository reads and writes. An HTTP request admitted before draining began
    can therefore finish persistence, idempotency recording, and scheduling.
-2. After connections close, `onApplicationShutdown` stops further schedules,
-   cancels queued timer handles, and awaits every tracked processing callback,
-   including its failure-recovery work. If an in-flight starting phase reaches
-   terminal-timer registration after this final stop, the same tracked
-   execution transitions the processing payment to `failed` instead of leaving
-   it stranded.
+2. The controller admits the complete creation operation through the processor
+   before idempotency execution starts. Scheduling is valid only through that
+   live admission, so no untracked schedule can cross the shutdown boundary.
+3. `onApplicationShutdown` synchronously closes new admissions and returns one
+   shared idempotent shutdown promise. It first awaits every admitted creation
+   through payment save, scheduling, and idempotency-record save. HTTP listener
+   state is not used as proof that application work has drained.
+4. After admissions drain, final shutdown stops scheduling and takes ownership
+   of every queued timer using its processing context. A canceled `starting`
+   timer leaves its payment `pending`; a canceled `completing` timer runs an
+   awaited, rejection-safe transition from `processing` to `failed`. Callback
+   and cancellation paths atomically transfer the same timer ownership, so
+   they cannot both process it.
+5. Final shutdown then awaits all tracked callbacks and recovery promises. If
+   an in-flight starting phase reaches terminal-timer registration after the
+   stop, that same tracked execution transitions the payment to `failed`.
 
-Both phases are idempotent. Liveness remains a process-only answer for as long
-as the HTTP server can still serve the probe, and the health check does not
-attempt to delay or reverse shutdown.
+Both phases and repeated final-hook calls are idempotent. Liveness remains a
+process-only answer for as long as the HTTP server can still serve the probe,
+and the health check does not attempt to delay or reverse shutdown.
 
 ## Testing strategy
 
@@ -234,7 +248,9 @@ between the creation and general limits.
 
 Health and processor unit tests cover live success, ready success, each false
 dependency, repository exceptions, safe logging, early draining, final timer
-cancellation, and an in-flight callback crossing final shutdown.
+cancellation, cancellation recovery for queued completion timers, admitted
+creation draining through idempotency persistence, and an in-flight callback
+crossing final shutdown.
 
 Focused Supertest suites use deliberately small limits and prove:
 

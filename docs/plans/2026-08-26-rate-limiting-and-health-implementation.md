@@ -7,8 +7,10 @@
 **Architecture:** A dedicated rate-limit module configures two named `@nestjs/throttler` policies through validated `ConfigService` values and registers a global guard with a stable error contract. A health service composes readiness from the payment repository and processor, while a version-neutral controller exposes process-only liveness and payment-work readiness outside the `/api/v1` boundary.
 
 Shutdown uses a two-phase drain: the early lifecycle hook changes readiness
-without disrupting already-admitted HTTP work, while the final hook stops
-scheduling, cancels queued timers, and awaits tracked processing callbacks.
+without disrupting already-admitted HTTP work. The controller wraps the entire
+idempotent creation operation in a processor-owned admission lease. The final
+hook closes new admissions, awaits live leases, recovers canceled completion
+timers, and awaits tracked processing callbacks.
 
 **Tech Stack:** Bun 1.3.8, NestJS 11 with Express, `@nestjs/throttler` 6.5.x, TypeScript, Zod, nestjs-pino/Pino, Swagger/OpenAPI, Jest, and Supertest.
 
@@ -679,11 +681,13 @@ git commit -m "feat(rate-limit): protect payment creation"
 - Modify: `src/payments/repositories/payment.repository.ts`
 - Modify: `src/payments/repositories/in-memory-payment.repository.ts`
 - Modify: `src/payments/processing/payment-processor.ts`
+- Modify: `src/payments/api/payments.controller.ts`
 - Modify: `test/unit/payments/in-memory-payment.repository.spec.ts`
 - Modify: `test/unit/payments/payments.service.spec.ts`
 - Modify: `test/unit/payments/payment-processor.spec.ts`
 - Modify: `test/payments.e2e-spec.ts`
 - Modify: `test/rate-limit.e2e-spec.ts`
+- Modify: `test/processing.e2e-spec.ts`
 
 **Interfaces:**
 
@@ -692,8 +696,12 @@ git commit -m "feat(rate-limit): protect payment creation"
   `beforeApplicationShutdown` phase, before the HTTP listener closes.
 - Keeps repository operations and processor scheduling available during that
   early drain for requests already admitted by the listener.
-- Stops schedules only during `onApplicationShutdown`, then cancels queued
-  timers and awaits tracked asynchronous processing and recovery work.
+- Admits the full controller/idempotency creation operation through a
+  processor-owned lease and closes new admissions synchronously in the final
+  hook.
+- After admitted creation promises drain, stops scheduling, recovers canceled
+  completion timers to `failed`, and awaits tracked asynchronous processing and
+  recovery work.
 
 - [ ] **Step 1: Write the failing repository lifecycle test**
 
@@ -766,40 +774,79 @@ export class InMemoryPaymentRepository
 
 In `src/payments/processing/payment-processor.ts`, add
 `BeforeApplicationShutdown` to the Nest imports and implemented interfaces.
-Use separate readiness and final-stop state. The early hook changes only the
-readiness signal; the final hook stops new schedules, cancels queued handles,
-and waits for callbacks that already own asynchronous work:
+Use separate readiness, admission, and final-stop state. The early hook changes
+only the readiness signal. A creation admission remains live through payment
+persistence, scheduling, and idempotency-record persistence. The final hook
+closes new admissions synchronously, shares one promise across repeated calls,
+and enters stopped cancellation only after admitted work drains:
 
 ```ts
+export interface PaymentCreationAdmission {
+  schedule(payment: Payment, idempotencyKey: string): void;
+}
+
 export class PaymentProcessor
   implements BeforeApplicationShutdown, OnApplicationShutdown
 {
   private ready = true;
+  private acceptingAdmissions = true;
   private stopped = false;
+  private shutdownPromise: Promise<void> | undefined;
+  private readonly admittedCreations = new Set<Promise<void>>();
   private readonly inFlightWork = new Set<Promise<void>>();
+
+  runWithAdmission<T>(
+    work: (admission: PaymentCreationAdmission) => Promise<T>,
+  ): Promise<T> {
+    // Reject new admission synchronously after final shutdown starts, then
+    // track a live lease until the complete creation promise settles.
+  }
 
   beforeApplicationShutdown(): void {
     this.ready = false;
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  onApplicationShutdown(): Promise<void> {
     this.ready = false;
+    this.acceptingAdmissions = false;
+    this.shutdownPromise ??= this.drainAdmissionsAndStop();
+    return this.shutdownPromise;
+  }
+
+  private async drainAdmissionsAndStop(): Promise<void> {
+    await Promise.all([...this.admittedCreations]);
     this.stopped = true;
-    for (const task of this.scheduledTasks) {
+    for (const [task, context] of this.scheduledTasks) {
+      if (!this.scheduledTasks.delete(task)) continue;
       task.cancel();
+      if (context.phase === 'completing') {
+        // Track and await rejection-safe transition to FAILED.
+      }
     }
-    this.scheduledTasks.clear();
     await Promise.all([...this.inFlightWork]);
   }
 }
 ```
 
-Timer callbacks must transfer ownership from `scheduledTasks` to a tracked
-promise that remains registered through normal work and failure recovery.
+`scheduledTasks` stores each handle with its `ProcessingContext`. Timer
+callbacks must atomically remove that ownership before starting a tracked
+promise that remains registered through normal work and failure recovery. The
+final cancellation path removes the same entry before canceling it, preventing
+callback and cancellation paths from double-handling a task. Canceling a
+queued `completing` context launches an awaited recovery that transitions an
+active payment to `failed` and logs/consumes persistence failures. Canceling a
+queued `starting` context leaves the payment `pending`.
+
 Internal timer registration reports whether it succeeded. If final shutdown
 starts while the starting phase is already in flight, a failed terminal-timer
 registration transitions the current `processing` payment to `failed` inside
 that same tracked execution.
+
+Wrap the complete controller create path, outside
+`PaymentCreationIdempotencyService.execute`, in `runWithAdmission`. Use only the
+lease's schedule method inside the idempotency callback. This makes the
+processor-owned admission promise cover payment save, schedule registration,
+and the idempotency repository save without relying on Nest HTTP teardown.
 
 Add regressions proving:
 
@@ -807,8 +854,13 @@ Add regressions proving:
   schedule and complete;
 - final shutdown waits for a held background read before resolving;
 - that race cannot leave a payment in `processing`;
-- final shutdown rejects late schedules with the existing error, cancels
-  queued timers, and remains idempotent after the early hook.
+- canceling a queued completion timer transitions `processing` to `failed` and
+  consumes/logs recovery persistence failure;
+- an admitted creation held during persistence can schedule and save its
+  idempotency record before shutdown resolves;
+- new admission after final shutdown starts throws the existing processor
+  error; and
+- repeated final hooks share one idempotent shutdown promise.
 
 - [ ] **Step 5: Update typed repository doubles**
 
@@ -825,9 +877,11 @@ isReady(): ReturnType<PaymentRepository['isReady']> {
 ```
 
 In `test/payments.e2e-spec.ts` and `test/rate-limit.e2e-spec.ts`, make processor
-doubles include both lifecycle hooks, return a promise from the final hook, and
-use `satisfies Pick<PaymentProcessor, ...>` so future lifecycle changes fail at
-compile time instead of drifting silently.
+doubles include the admission method and both lifecycle hooks, return a promise
+from the final hook, and use `satisfies Pick<PaymentProcessor, ...>` so future
+lifecycle changes fail at compile time instead of drifting silently. Update
+processing E2E setup and direct processor tests to enter the same production
+admission boundary before scheduling.
 
 - [ ] **Step 6: Run focused and full unit verification**
 
@@ -837,7 +891,7 @@ compile time instead of drifting silently.
 /Users/abdulafeezpifapp/.bun/bin/bun run lint
 /Users/abdulafeezpifapp/.bun/bin/bun run typecheck
 /Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments rate-limit
+/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments rate-limit processing
 /Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
 /Users/abdulafeezpifapp/.bun/bin/bun run build
 ```
@@ -858,6 +912,16 @@ separately:
 ```bash
 git add src/payments/processing/payment-processor.ts test/unit/payments/payment-processor.spec.ts test/payments.e2e-spec.ts test/rate-limit.e2e-spec.ts
 git commit -m "fix(processing): drain work during shutdown"
+```
+
+Complete the reviewed timer and admission ownership model in focused commits:
+
+```bash
+git add src/payments/processing/payment-processor.ts test/unit/payments/payment-processor.spec.ts
+git commit -m "fix(processing): finalize canceled completions"
+
+git add src/payments/processing/payment-processor.ts src/payments/api/payments.controller.ts test/unit/payments/payment-processor.spec.ts test/payments.e2e-spec.ts test/rate-limit.e2e-spec.ts test/processing.e2e-spec.ts
+git commit -m "fix(processing): drain admitted creations"
 ```
 
 ---
