@@ -20,10 +20,10 @@ describe('InMemoryPaymentRepository', () => {
     repository = new InMemoryPaymentRepository();
   });
 
-  it('saves and retrieves a payment by ID', async () => {
+  it('creates and retrieves a payment by ID', async () => {
     const payment = createPayment('order-1');
 
-    await repository.save(payment);
+    await repository.create(payment);
 
     await expect(repository.findById(payment.id)).resolves.toBe(payment);
   });
@@ -32,22 +32,32 @@ describe('InMemoryPaymentRepository', () => {
     await expect(repository.findById('unknown-id')).resolves.toBeNull();
   });
 
-  it('replaces the stored snapshot when the same payment ID is saved', async () => {
+  it('atomically transitions and replaces the stored snapshot', async () => {
     const pending = createPayment('order-2');
     const processing = pending.transitionTo(PaymentStatus.PROCESSING);
-    await repository.save(pending);
+    await repository.create(pending);
 
-    await repository.save(processing);
+    const transition = await repository.transition(
+      pending.id,
+      PaymentStatus.PROCESSING,
+    );
 
-    await expect(repository.findById(pending.id)).resolves.toBe(processing);
+    expect(transition).toEqual({ previous: pending, current: processing });
+    await expect(repository.findById(pending.id)).resolves.toEqual(processing);
+  });
+
+  it('returns null when transitioning an unknown payment ID', async () => {
+    await expect(
+      repository.transition('unknown-id', PaymentStatus.PROCESSING),
+    ).resolves.toBeNull();
   });
 
   it('stores different payment IDs independently', async () => {
     const first = createPayment('order-3');
     const second = createPayment('order-4');
 
-    await repository.save(first);
-    await repository.save(second);
+    await repository.create(first);
+    await repository.create(second);
 
     await expect(repository.findById(first.id)).resolves.toBe(first);
     await expect(repository.findById(second.id)).resolves.toBe(second);

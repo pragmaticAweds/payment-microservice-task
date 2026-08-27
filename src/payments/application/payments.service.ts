@@ -17,7 +17,7 @@ export class PaymentsService {
   async create(input: CreatePaymentInput): Promise<Payment> {
     const payment = Payment.create(input);
 
-    await this.repository.save(payment);
+    await this.repository.create(payment);
     this.logger.info(
       {
         event: 'payment.created',
@@ -41,20 +41,21 @@ export class PaymentsService {
   }
 
   async transition(id: string, nextStatus: PaymentStatus): Promise<Payment> {
-    const current = await this.findById(id);
-    const updated = current.transitionTo(nextStatus);
+    const transition = await this.repository.transition(id, nextStatus);
+    if (transition === null) {
+      throw new PaymentNotFoundError(id);
+    }
 
-    await this.repository.save(updated);
     this.logger.info(
       {
         event: 'payment.status_transitioned',
-        paymentId: updated.id,
-        fromStatus: current.status,
-        toStatus: updated.status,
+        paymentId: transition.current.id,
+        fromStatus: transition.previous.status,
+        toStatus: transition.current.status,
       },
       'Payment status transitioned',
     );
 
-    return updated;
+    return transition.current;
   }
 }

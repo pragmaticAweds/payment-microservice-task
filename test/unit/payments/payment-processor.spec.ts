@@ -30,17 +30,28 @@ class ToggleFailureRepository implements PaymentRepository {
   private readonly delegate = new InMemoryPaymentRepository();
   failedSavesRemaining = 0;
 
-  save(payment: Parameters<PaymentRepository['save']>[0]): Promise<void> {
+  create(payment: Parameters<PaymentRepository['create']>[0]): Promise<void> {
     if (this.failedSavesRemaining > 0) {
       this.failedSavesRemaining -= 1;
       return Promise.reject(new Error('repository unavailable'));
     }
 
-    return this.delegate.save(payment);
+    return this.delegate.create(payment);
   }
 
   findById(id: string): ReturnType<PaymentRepository['findById']> {
     return this.delegate.findById(id);
+  }
+
+  transition(
+    ...args: Parameters<PaymentRepository['transition']>
+  ): ReturnType<PaymentRepository['transition']> {
+    if (this.failedSavesRemaining > 0) {
+      this.failedSavesRemaining -= 1;
+      return Promise.reject(new Error('repository unavailable'));
+    }
+
+    return this.delegate.transition(...args);
   }
 
   isReady(): Promise<boolean> {
@@ -67,8 +78,8 @@ class BlockingReadRepository implements PaymentRepository {
   private heldRead:
     { started: DeferredSignal; released: DeferredSignal } | undefined;
 
-  save(payment: Parameters<PaymentRepository['save']>[0]): Promise<void> {
-    return this.delegate.save(payment);
+  create(payment: Parameters<PaymentRepository['create']>[0]): Promise<void> {
+    return this.delegate.create(payment);
   }
 
   async findById(id: string): ReturnType<PaymentRepository['findById']> {
@@ -80,6 +91,12 @@ class BlockingReadRepository implements PaymentRepository {
     }
 
     return this.delegate.findById(id);
+  }
+
+  transition(
+    ...args: Parameters<PaymentRepository['transition']>
+  ): ReturnType<PaymentRepository['transition']> {
+    return this.delegate.transition(...args);
   }
 
   isReady(): Promise<boolean> {
@@ -100,7 +117,9 @@ class BlockingSaveRepository implements PaymentRepository {
   private heldSave:
     { started: DeferredSignal; released: DeferredSignal } | undefined;
 
-  async save(payment: Parameters<PaymentRepository['save']>[0]): Promise<void> {
+  async create(
+    payment: Parameters<PaymentRepository['create']>[0],
+  ): Promise<void> {
     const heldSave = this.heldSave;
     if (heldSave !== undefined) {
       this.heldSave = undefined;
@@ -108,11 +127,17 @@ class BlockingSaveRepository implements PaymentRepository {
       await heldSave.released.promise;
     }
 
-    return this.delegate.save(payment);
+    return this.delegate.create(payment);
   }
 
   findById(id: string): ReturnType<PaymentRepository['findById']> {
     return this.delegate.findById(id);
+  }
+
+  transition(
+    ...args: Parameters<PaymentRepository['transition']>
+  ): ReturnType<PaymentRepository['transition']> {
+    return this.delegate.transition(...args);
   }
 
   isReady(): Promise<boolean> {

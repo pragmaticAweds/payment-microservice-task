@@ -5,11 +5,18 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
+import type { Payment } from '../src/payments/domain/payment';
+import { PaymentStatus } from '../src/payments/domain/payment-status';
 import {
   PROCESSING_SCHEDULER,
   type ProcessingScheduler,
   type ScheduledProcessingTask,
 } from '../src/payments/processing/processing-scheduler';
+import { InMemoryPaymentRepository } from '../src/payments/repositories/in-memory-payment.repository';
+import {
+  PAYMENT_REPOSITORY,
+  type PaymentRepository,
+} from '../src/payments/repositories/payment.repository';
 
 interface ControlledTask {
   canceled: boolean;
@@ -51,6 +58,71 @@ class ControlledProcessingScheduler implements ProcessingScheduler {
       }
     }
     throw new Error('No controlled processing task is pending');
+  }
+}
+
+interface DeferredSignal {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
+function createDeferredSignal(): DeferredSignal {
+  let resolve = (): void => undefined;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
+
+class BlockingTransitionRepository implements PaymentRepository {
+  private readonly delegate = new InMemoryPaymentRepository();
+  private heldTransition:
+    | {
+        nextStatus: PaymentStatus;
+        started: DeferredSignal;
+        released: DeferredSignal;
+      }
+    | undefined;
+
+  create(payment: Payment): Promise<void> {
+    return this.delegate.create(payment);
+  }
+
+  findById(id: string): Promise<Payment | null> {
+    return this.delegate.findById(id);
+  }
+
+  async transition(
+    id: string,
+    nextStatus: PaymentStatus,
+  ): ReturnType<PaymentRepository['transition']> {
+    const heldTransition = this.heldTransition;
+    if (
+      heldTransition !== undefined &&
+      heldTransition.nextStatus === nextStatus
+    ) {
+      this.heldTransition = undefined;
+      heldTransition.started.resolve();
+      await heldTransition.released.promise;
+    }
+
+    return this.delegate.transition(id, nextStatus);
+  }
+
+  isReady(): Promise<boolean> {
+    return this.delegate.isReady();
+  }
+
+  holdNextTransition(nextStatus: PaymentStatus): {
+    started: Promise<void>;
+    release: () => void;
+  } {
+    const started = createDeferredSignal();
+    const released = createDeferredSignal();
+    this.heldTransition = { nextStatus, started, released };
+
+    return { started: started.promise, release: released.resolve };
   }
 }
 
@@ -97,6 +169,7 @@ describe('Asynchronous payment processing (e2e)', () => {
 
   async function createTestApp(options: {
     delayMs: number;
+    repository?: PaymentRepository;
     successRate: number;
   }): Promise<{
     scheduler: ControlledProcessingScheduler;
@@ -110,14 +183,19 @@ describe('Asynchronous payment processing (e2e)', () => {
       PROCESSING_DELAY_MS: options.delayMs,
       SIMULATED_SUCCESS_RATE: options.successRate,
     });
-    const moduleFixture = await Test.createTestingModule({
+    let moduleBuilder = Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(ConfigService)
       .useValue(config)
       .overrideProvider(PROCESSING_SCHEDULER)
-      .useValue(scheduler)
-      .compile();
+      .useValue(scheduler);
+    if (options.repository !== undefined) {
+      moduleBuilder = moduleBuilder
+        .overrideProvider(PAYMENT_REPOSITORY)
+        .useValue(options.repository);
+    }
+    const moduleFixture = await moduleBuilder.compile();
     const testApp: INestApplication<App> =
       moduleFixture.createNestApplication();
     configureApplication(testApp);
@@ -215,5 +293,49 @@ describe('Asynchronous payment processing (e2e)', () => {
       .get(`/api/v1/payments/${originalPayment.id}`)
       .expect(200);
     expect((current.body as PaymentResponseBody).data.status).toBe('succeeded');
+  });
+
+  it('returns 409 to a manual terminal patch when processor completion wins the race', async () => {
+    const repository = new BlockingTransitionRepository();
+    const { scheduler, testApp } = await createTestApp({
+      delayMs: 25,
+      repository,
+      successRate: 1,
+    });
+    app = testApp;
+    const created = await request(testApp.getHttpServer())
+      .post('/api/v1/payments')
+      .set('Idempotency-Key', 'processing-manual-race-key')
+      .send(validRequest)
+      .expect(201);
+    const payment = (created.body as PaymentResponseBody).data;
+
+    expect(scheduler.releaseNext()).toBe(0);
+    await flushProcessorWork();
+    expect(scheduler.pendingDelays()).toEqual([25]);
+
+    const heldTransition = repository.holdNextTransition(PaymentStatus.FAILED);
+    const manualResponse = request(testApp.getHttpServer())
+      .patch(`/api/v1/payments/${payment.id}/status`)
+      .send({ status: PaymentStatus.FAILED })
+      .expect(409)
+      .then((response) => response);
+    await heldTransition.started;
+
+    const terminalDelay = scheduler.releaseNext();
+    await flushProcessorWork();
+    heldTransition.release();
+    expect(terminalDelay).toBe(25);
+    const manual = await manualResponse;
+    expect(manual.body).toMatchObject({
+      code: 'INVALID_PAYMENT_TRANSITION',
+      details: { from: 'succeeded', to: 'failed' },
+      statusCode: 409,
+    });
+
+    const stored = await request(testApp.getHttpServer())
+      .get(`/api/v1/payments/${payment.id}`)
+      .expect(200);
+    expect((stored.body as PaymentResponseBody).data.status).toBe('succeeded');
   });
 });

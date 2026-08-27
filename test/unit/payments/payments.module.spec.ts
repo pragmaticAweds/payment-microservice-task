@@ -39,7 +39,7 @@ describe('PaymentsModule', () => {
     });
 
     expect(repository).toBeInstanceOf(InMemoryPaymentRepository);
-    await repository.save(payment);
+    await repository.create(payment);
     await expect(repository.findById(payment.id)).resolves.toBe(payment);
   });
 

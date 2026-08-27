@@ -1,9 +1,20 @@
 import { Payment } from '../domain/payment';
+import { PaymentStatus } from '../domain/payment-status';
 
 export const PAYMENT_REPOSITORY = Symbol('PAYMENT_REPOSITORY');
 
+export interface PaymentTransition {
+  previous: Payment;
+  current: Payment;
+}
+
 export interface PaymentRepository {
-  save(payment: Payment): Promise<void>;
+  create(payment: Payment): Promise<void>;
   findById(id: string): Promise<Payment | null>;
+  /** Loads, validates, and persists one status transition atomically. */
+  transition(
+    id: string,
+    nextStatus: PaymentStatus,
+  ): Promise<PaymentTransition | null>;
   isReady(): Promise<boolean>;
 }
