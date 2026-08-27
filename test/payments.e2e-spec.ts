@@ -6,7 +6,10 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
-import { PaymentProcessor } from '../src/payments/processing/payment-processor';
+import {
+  type PaymentCreationAdmission,
+  PaymentProcessor,
+} from '../src/payments/processing/payment-processor';
 
 interface PaymentResource {
   id: string;
@@ -101,13 +104,15 @@ describe('Payments API (e2e)', () => {
     })
       .overrideProvider(PaymentProcessor)
       .useValue({
-        schedule: () => undefined,
+        runWithAdmission: <T>(
+          work: (admission: PaymentCreationAdmission) => Promise<T>,
+        ): Promise<T> => work({ schedule: () => undefined }),
         isReady: () => true,
         beforeApplicationShutdown: () => undefined,
         onApplicationShutdown: () => Promise.resolve(),
       } satisfies Pick<
         PaymentProcessor,
-        | 'schedule'
+        | 'runWithAdmission'
         | 'isReady'
         | 'beforeApplicationShutdown'
         | 'onApplicationShutdown'

@@ -7,7 +7,10 @@ import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
 import { validateEnvironment } from '../src/config/environment';
-import { PaymentProcessor } from '../src/payments/processing/payment-processor';
+import {
+  type PaymentCreationAdmission,
+  PaymentProcessor,
+} from '../src/payments/processing/payment-processor';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -74,13 +77,15 @@ describe('Rate limiting (e2e)', () => {
       .useValue(new ConfigService(environment))
       .overrideProvider(PaymentProcessor)
       .useValue({
-        schedule: () => undefined,
+        runWithAdmission: <T>(
+          work: (admission: PaymentCreationAdmission) => Promise<T>,
+        ): Promise<T> => work({ schedule: () => undefined }),
         isReady: () => true,
         beforeApplicationShutdown: () => undefined,
         onApplicationShutdown: () => Promise.resolve(),
       } satisfies Pick<
         PaymentProcessor,
-        | 'schedule'
+        | 'runWithAdmission'
         | 'isReady'
         | 'beforeApplicationShutdown'
         | 'onApplicationShutdown'

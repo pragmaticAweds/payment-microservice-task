@@ -151,14 +151,16 @@ export class PaymentsController {
     @Body() input: CreatePaymentDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<PaymentDataResponse> {
-    const result = await this.idempotencyService.execute(
-      idempotencyKey,
-      input,
-      async (validatedIdempotencyKey) => {
-        const payment = await this.paymentsService.create(input);
-        this.paymentProcessor.schedule(payment, validatedIdempotencyKey);
-        return payment;
-      },
+    const result = await this.paymentProcessor.runWithAdmission((admission) =>
+      this.idempotencyService.execute(
+        idempotencyKey,
+        input,
+        async (validatedIdempotencyKey) => {
+          const payment = await this.paymentsService.create(input);
+          admission.schedule(payment, validatedIdempotencyKey);
+          return payment;
+        },
+      ),
     );
 
     if (result.replayed) {

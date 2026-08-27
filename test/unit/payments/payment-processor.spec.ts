@@ -1,5 +1,8 @@
 import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
+import { PaymentsController } from '../../../src/payments/api/payments.controller';
+import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
 import { PaymentsService } from '../../../src/payments/application/payments.service';
 import {
   PaymentCurrency,
@@ -9,6 +12,7 @@ import type { PaymentOutcomeResolver } from '../../../src/payments/processing/pa
 import { PaymentProcessor } from '../../../src/payments/processing/payment-processor';
 import { TimeoutProcessingScheduler } from '../../../src/payments/processing/timeout-processing.scheduler';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
+import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';
 import type { PaymentRepository } from '../../../src/payments/repositories/payment.repository';
 
 interface TestLogMetadata {
@@ -91,6 +95,39 @@ class BlockingReadRepository implements PaymentRepository {
   }
 }
 
+class BlockingSaveRepository implements PaymentRepository {
+  private readonly delegate = new InMemoryPaymentRepository();
+  private heldSave:
+    { started: DeferredSignal; released: DeferredSignal } | undefined;
+
+  async save(payment: Parameters<PaymentRepository['save']>[0]): Promise<void> {
+    const heldSave = this.heldSave;
+    if (heldSave !== undefined) {
+      this.heldSave = undefined;
+      heldSave.started.resolve();
+      await heldSave.released.promise;
+    }
+
+    return this.delegate.save(payment);
+  }
+
+  findById(id: string): ReturnType<PaymentRepository['findById']> {
+    return this.delegate.findById(id);
+  }
+
+  isReady(): Promise<boolean> {
+    return this.delegate.isReady();
+  }
+
+  holdNextSave(): { started: Promise<void>; release: () => void } {
+    const started = createDeferredSignal();
+    const released = createDeferredSignal();
+    this.heldSave = { started, released };
+
+    return { started: started.promise, release: released.resolve };
+  }
+}
+
 describe('PaymentProcessor', () => {
   const input = {
     smallestUnitAmount: 1050,
@@ -143,11 +180,22 @@ describe('PaymentProcessor', () => {
     return { payments, processor };
   }
 
+  async function schedulePayment(
+    processor: PaymentProcessor,
+    payment: Parameters<PaymentProcessor['schedule']>[0],
+    idempotencyKey: string,
+  ): Promise<void> {
+    await processor.runWithAdmission((admission) => {
+      admission.schedule(payment, idempotencyKey);
+      return Promise.resolve();
+    });
+  }
+
   it('moves pending through processing after the configured delay', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
 
-    processor.schedule(payment, 'processor-key');
+    await schedulePayment(processor, payment, 'processor-key');
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
       status: PaymentStatus.PENDING,
@@ -191,7 +239,7 @@ describe('PaymentProcessor', () => {
     const { payments, processor } = createHarness({ delayMs: 0 });
     const payment = await payments.create(input);
 
-    processor.schedule(payment, 'zero-delay-key');
+    await schedulePayment(processor, payment, 'zero-delay-key');
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
       status: PaymentStatus.PENDING,
@@ -208,7 +256,7 @@ describe('PaymentProcessor', () => {
     });
     const payment = await payments.create(input);
 
-    processor.schedule(payment, 'selected-failure-key');
+    await schedulePayment(processor, payment, 'selected-failure-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
@@ -225,7 +273,7 @@ describe('PaymentProcessor', () => {
     const { payments, processor } = createHarness({ resolver });
     const payment = await payments.create(input);
 
-    processor.schedule(payment, 'resolver-failure-key');
+    await schedulePayment(processor, payment, 'resolver-failure-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
@@ -247,7 +295,7 @@ describe('PaymentProcessor', () => {
     const payment = await payments.create(input);
     repository.failedSavesRemaining = 1;
 
-    processor.schedule(payment, 'transition-failure-key');
+    await schedulePayment(processor, payment, 'transition-failure-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
@@ -268,7 +316,7 @@ describe('PaymentProcessor', () => {
     const payment = await payments.create(input);
     await payments.transition(payment.id, PaymentStatus.PROCESSING);
 
-    processor.schedule(payment, 'already-processing-key');
+    await schedulePayment(processor, payment, 'already-processing-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
@@ -285,7 +333,7 @@ describe('PaymentProcessor', () => {
       PaymentStatus.SUCCEEDED,
     );
 
-    processor.schedule(payment, 'already-terminal-key');
+    await schedulePayment(processor, payment, 'already-terminal-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toEqual(succeeded);
@@ -303,7 +351,7 @@ describe('PaymentProcessor', () => {
     const payment = await payments.create(input);
     repository.failedSavesRemaining = Number.POSITIVE_INFINITY;
 
-    processor.schedule(payment, 'recovery-failure-key');
+    await schedulePayment(processor, payment, 'recovery-failure-key');
     await jest.runAllTimersAsync();
     await Promise.resolve();
 
@@ -327,11 +375,77 @@ describe('PaymentProcessor', () => {
     processor.beforeApplicationShutdown();
 
     expect(processor.isReady()).toBe(false);
-    expect(() => processor.schedule(payment, 'draining-key')).not.toThrow();
+    await expect(
+      schedulePayment(processor, payment, 'draining-key'),
+    ).resolves.toBeUndefined();
     await jest.runAllTimersAsync();
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
       status: PaymentStatus.SUCCEEDED,
     });
+  });
+
+  it('drains an admitted controller creation through scheduling and idempotency persistence', async () => {
+    const repository = new BlockingSaveRepository();
+    const { payments, processor } = createHarness({ repository });
+    const idempotencyRepository = new InMemoryPaymentIdempotencyRepository();
+    const idempotency = new PaymentCreationIdempotencyService(
+      idempotencyRepository,
+      logger,
+    );
+    const controller = new PaymentsController(payments, idempotency, processor);
+    const heldSave = repository.holdNextSave();
+    const key = 'admitted-controller-shutdown-key';
+    const creation = controller.create(key, input, {
+      setHeader: jest.fn(),
+    } as unknown as Response);
+    await heldSave.started;
+
+    let shutdownSettled = false;
+    const firstShutdown = processor.onApplicationShutdown();
+    const secondShutdown = processor.onApplicationShutdown();
+    void firstShutdown.then(() => {
+      shutdownSettled = true;
+    });
+    await jest.runAllTimersAsync();
+    const settledBeforeRelease = shutdownSettled;
+    const sharedShutdownPromise = firstShutdown === secondShutdown;
+
+    heldSave.release();
+    const creationOutcome = await creation.then(
+      (result) => ({ result }),
+      (error: unknown) => ({ error }),
+    );
+    await firstShutdown;
+    const idempotencyRecord = await idempotencyRepository.findByKey(key);
+
+    expect({
+      creationCompleted: 'result' in creationOutcome,
+      idempotencyRecordSaved: idempotencyRecord !== null,
+      settledBeforeRelease,
+      sharedShutdownPromise,
+    }).toEqual({
+      creationCompleted: true,
+      idempotencyRecordSaved: true,
+      settledBeforeRelease: false,
+      sharedShutdownPromise: true,
+    });
+    expect(creationOutcome).toMatchObject({
+      result: { data: { status: PaymentStatus.PENDING } },
+    });
+    expect(idempotencyRecord).toMatchObject({
+      key,
+      response: { status: PaymentStatus.PENDING },
+    });
+  });
+
+  it('rejects a new creation admission after final shutdown starts', async () => {
+    const { processor } = createHarness();
+    const shutdown = processor.onApplicationShutdown();
+
+    expect(() => processor.runWithAdmission(() => Promise.resolve())).toThrow(
+      'Payment processor is not accepting work',
+    );
+    await shutdown;
   });
 
   it('awaits in-flight work and fails processing when final shutdown blocks its terminal timer', async () => {
@@ -339,7 +453,7 @@ describe('PaymentProcessor', () => {
     const { payments, processor } = createHarness({ repository });
     const payment = await payments.create(input);
     const heldRead = repository.holdNextRead();
-    processor.schedule(payment, 'in-flight-shutdown-key');
+    await schedulePayment(processor, payment, 'in-flight-shutdown-key');
     await jest.advanceTimersByTimeAsync(0);
     await heldRead.started;
 
@@ -365,7 +479,7 @@ describe('PaymentProcessor', () => {
   it('fails a processing payment when final shutdown cancels its completion timer', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
-    processor.schedule(payment, 'queued-completion-key');
+    await schedulePayment(processor, payment, 'queued-completion-key');
     await jest.advanceTimersByTimeAsync(0);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
       status: PaymentStatus.PROCESSING,
@@ -382,7 +496,7 @@ describe('PaymentProcessor', () => {
     const repository = new ToggleFailureRepository();
     const { payments, processor } = createHarness({ repository });
     const payment = await payments.create(input);
-    processor.schedule(payment, 'queued-recovery-failure-key');
+    await schedulePayment(processor, payment, 'queued-recovery-failure-key');
     await jest.advanceTimersByTimeAsync(0);
     repository.failedSavesRemaining = Number.POSITIVE_INFINITY;
 
@@ -403,14 +517,14 @@ describe('PaymentProcessor', () => {
   it('cancels queued work and rejects new schedules during final shutdown', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
-    processor.schedule(payment, 'shutdown-key');
+    await schedulePayment(processor, payment, 'shutdown-key');
 
     processor.beforeApplicationShutdown();
     await processor.onApplicationShutdown();
     await processor.onApplicationShutdown();
 
     expect(processor.isReady()).toBe(false);
-    expect(() => processor.schedule(payment, 'late-key')).toThrow(
+    expect(() => processor.runWithAdmission(() => Promise.resolve())).toThrow(
       'Payment processor is not accepting work',
     );
     await jest.runAllTimersAsync();

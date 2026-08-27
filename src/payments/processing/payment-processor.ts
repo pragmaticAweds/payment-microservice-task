@@ -32,6 +32,10 @@ interface ProcessingContext {
   phase: ProcessingPhase;
 }
 
+export interface PaymentCreationAdmission {
+  schedule(payment: Payment, idempotencyKey: string): void;
+}
+
 @Injectable()
 export class PaymentProcessor
   implements BeforeApplicationShutdown, OnApplicationShutdown
@@ -41,9 +45,13 @@ export class PaymentProcessor
     ScheduledProcessingTask,
     ProcessingContext
   >();
+  private readonly activeAdmissionTokens = new WeakSet<object>();
+  private readonly admittedCreations = new Set<Promise<void>>();
   private readonly inFlightWork = new Set<Promise<void>>();
   private ready = true;
+  private acceptingAdmissions = true;
   private stopped = false;
+  private shutdownPromise: Promise<void> | undefined;
 
   constructor(
     private readonly payments: PaymentsService,
@@ -57,8 +65,41 @@ export class PaymentProcessor
     this.delayMs = config.getOrThrow<number>('PROCESSING_DELAY_MS');
   }
 
-  schedule(payment: Payment, idempotencyKey: string): void {
-    if (this.stopped) {
+  runWithAdmission<T>(
+    work: (admission: PaymentCreationAdmission) => Promise<T>,
+  ): Promise<T> {
+    if (!this.acceptingAdmissions) {
+      throw new Error('Payment processor is not accepting work');
+    }
+
+    const token = {};
+    this.activeAdmissionTokens.add(token);
+    const operation = Promise.resolve().then(() =>
+      work({
+        schedule: (payment, idempotencyKey) =>
+          this.schedule(payment, idempotencyKey, token),
+      }),
+    );
+    const tracked = operation.then(
+      () => {
+        this.activeAdmissionTokens.delete(token);
+      },
+      () => {
+        this.activeAdmissionTokens.delete(token);
+      },
+    );
+    this.admittedCreations.add(tracked);
+    void tracked.then(() => this.admittedCreations.delete(tracked));
+
+    return operation;
+  }
+
+  schedule(
+    payment: Payment,
+    idempotencyKey: string,
+    admissionToken: object,
+  ): void {
+    if (this.stopped || !this.activeAdmissionTokens.has(admissionToken)) {
       throw new Error('Payment processor is not accepting work');
     }
 
@@ -92,23 +133,27 @@ export class PaymentProcessor
     this.ready = false;
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  onApplicationShutdown(): Promise<void> {
     this.ready = false;
-    if (!this.stopped) {
-      this.stopped = true;
-      const recoveries: Promise<void>[] = [];
-      for (const [task, context] of this.scheduledTasks) {
-        if (!this.scheduledTasks.delete(task)) {
-          continue;
-        }
-        task.cancel();
-        if (context.phase === 'completing') {
-          recoveries.push(this.recoverCanceledCompletion(context));
-        }
-      }
-      await Promise.all(recoveries);
-    }
+    this.acceptingAdmissions = false;
+    this.shutdownPromise ??= this.drainAdmissionsAndStop();
+    return this.shutdownPromise;
+  }
 
+  private async drainAdmissionsAndStop(): Promise<void> {
+    await Promise.all([...this.admittedCreations]);
+    this.stopped = true;
+    const recoveries: Promise<void>[] = [];
+    for (const [task, context] of this.scheduledTasks) {
+      if (!this.scheduledTasks.delete(task)) {
+        continue;
+      }
+      task.cancel();
+      if (context.phase === 'completing') {
+        recoveries.push(this.recoverCanceledCompletion(context));
+      }
+    }
+    await Promise.all(recoveries);
     await Promise.all([...this.inFlightWork]);
   }
 
