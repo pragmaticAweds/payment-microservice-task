@@ -443,6 +443,11 @@ bun run test:cov
 bun run build
 ```
 
+This project uses Bun to run package scripts and Jest as its test runner. Always
+run the unit suite with `bun run test`. Do not use `bun test`, because that
+command starts Bun's native test runner, which does not provide every Jest API
+used by this suite.
+
 The unit suite emits text, LCOV, and HTML coverage reports. Global thresholds are:
 
 | Metric     | Minimum |
