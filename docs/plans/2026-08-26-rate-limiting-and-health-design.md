@@ -137,16 +137,18 @@ Readiness answers whether the service can accept new payment work. It composes
 two explicit signals:
 
 - `PaymentRepository.isReady(): Promise<boolean>` reports whether persistence
-  can accept work;
-- `PaymentProcessor.isReady(): boolean` reports whether background processing
-  accepts schedules.
+  is open to new HTTP work;
+- `PaymentProcessor.isReady(): boolean` reports whether the service is
+  admitting new payment requests.
 
 The in-memory repository implements Nest's shutdown lifecycle and changes its
 readiness signal to `false` in `beforeApplicationShutdown`, before Nest closes
-the HTTP listener. The processor gains the same early signal while retaining
-its idempotent final cleanup hook. The health service evaluates both checks and
-catches repository-check failures so infrastructure errors do not escape as
-unhandled exceptions.
+the HTTP listener. Its `save` and `findById` methods remain available so work
+admitted before draining began can finish. The processor exposes the same early
+readiness signal, but does not reject a schedule or cancel work until Nest has
+closed connections and invokes the final shutdown hook. The health service
+evaluates both checks and catches repository-check failures so infrastructure
+errors do not escape as unhandled exceptions.
 
 When both dependencies are ready, the endpoint returns `200 OK`:
 
@@ -203,16 +205,23 @@ Rate-limit response headers are covered in endpoint metadata where applicable:
 
 ## Shutdown behavior
 
-Nest's `beforeApplicationShutdown` hook notifies both the repository and
-processor before connections close. Once shutdown begins:
+Shutdown is deliberately split across Nest's two lifecycle phases:
 
-1. the processor rejects new schedules and cancels timers;
-2. the repository marks itself not ready;
-3. a readiness evaluation returns `503 SERVICE_NOT_READY`;
-4. liveness remains a process-only answer for as long as the HTTP server can
-   still serve the probe.
+1. `beforeApplicationShutdown` marks the repository and processor not ready,
+   so readiness returns `503 SERVICE_NOT_READY` before the HTTP listener closes.
+   It does not reject processor schedules, cancel timer handles, or disable
+   repository reads and writes. An HTTP request admitted before draining began
+   can therefore finish persistence, idempotency recording, and scheduling.
+2. After connections close, `onApplicationShutdown` stops further schedules,
+   cancels queued timer handles, and awaits every tracked processing callback,
+   including its failure-recovery work. If an in-flight starting phase reaches
+   terminal-timer registration after this final stop, the same tracked
+   execution transitions the processing payment to `failed` instead of leaving
+   it stranded.
 
-The health check does not attempt to delay or reverse shutdown.
+Both phases are idempotent. Liveness remains a process-only answer for as long
+as the HTTP server can still serve the probe, and the health check does not
+attempt to delay or reverse shutdown.
 
 ## Testing strategy
 
@@ -223,8 +232,9 @@ selection of the payment-creation policy, health exclusions, and the stable
 throttling exception body. Configuration tests cover the strict relationship
 between the creation and general limits.
 
-Health unit tests cover live success, ready success, each false dependency,
-repository exceptions, safe logging, and shutdown state changes.
+Health and processor unit tests cover live success, ready success, each false
+dependency, repository exceptions, safe logging, early draining, final timer
+cancellation, and an in-flight callback crossing final shutdown.
 
 Focused Supertest suites use deliberately small limits and prove:
 

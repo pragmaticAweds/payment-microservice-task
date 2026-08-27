@@ -6,6 +6,10 @@
 
 **Architecture:** A dedicated rate-limit module configures two named `@nestjs/throttler` policies through validated `ConfigService` values and registers a global guard with a stable error contract. A health service composes readiness from the payment repository and processor, while a version-neutral controller exposes process-only liveness and payment-work readiness outside the `/api/v1` boundary.
 
+Shutdown uses a two-phase drain: the early lifecycle hook changes readiness
+without disrupting already-admitted HTTP work, while the final hook stops
+scheduling, cancels queued timers, and awaits tracked processing callbacks.
+
 **Tech Stack:** Bun 1.3.8, NestJS 11 with Express, `@nestjs/throttler` 6.5.x, TypeScript, Zod, nestjs-pino/Pino, Swagger/OpenAPI, Jest, and Supertest.
 
 **Spec:** `docs/plans/2026-08-26-rate-limiting-and-health-design.md`
@@ -499,8 +503,15 @@ describe('Rate limiting (e2e)', () => {
       .useValue({
         schedule: () => undefined,
         isReady: () => true,
-        onApplicationShutdown: () => undefined,
-      })
+        beforeApplicationShutdown: () => undefined,
+        onApplicationShutdown: () => Promise.resolve(),
+      } satisfies Pick<
+        PaymentProcessor,
+        | 'schedule'
+        | 'isReady'
+        | 'beforeApplicationShutdown'
+        | 'onApplicationShutdown'
+      >)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -671,12 +682,18 @@ git commit -m "feat(rate-limit): protect payment creation"
 - Modify: `test/unit/payments/in-memory-payment.repository.spec.ts`
 - Modify: `test/unit/payments/payments.service.spec.ts`
 - Modify: `test/unit/payments/payment-processor.spec.ts`
+- Modify: `test/payments.e2e-spec.ts`
+- Modify: `test/rate-limit.e2e-spec.ts`
 
 **Interfaces:**
 
 - Adds `PaymentRepository.isReady(): Promise<boolean>`.
 - Makes the repository and processor report not ready during Nest's
   `beforeApplicationShutdown` phase, before the HTTP listener closes.
+- Keeps repository operations and processor scheduling available during that
+  early drain for requests already admitted by the listener.
+- Stops schedules only during `onApplicationShutdown`, then cancels queued
+  timers and awaits tracked asynchronous processing and recovery work.
 
 - [ ] **Step 1: Write the failing repository lifecycle test**
 
@@ -745,40 +762,53 @@ export class InMemoryPaymentRepository
 }
 ```
 
-- [ ] **Step 4: Signal processor unavailability before connections close**
+- [ ] **Step 4: Drain processor work across both shutdown phases**
 
 In `src/payments/processing/payment-processor.ts`, add
 `BeforeApplicationShutdown` to the Nest imports and implemented interfaces.
-Keep the existing final hook for idempotent cleanup, and route both hooks
-through one private operation:
+Use separate readiness and final-stop state. The early hook changes only the
+readiness signal; the final hook stops new schedules, cancels queued handles,
+and waits for callbacks that already own asynchronous work:
 
 ```ts
 export class PaymentProcessor
   implements BeforeApplicationShutdown, OnApplicationShutdown
 {
-  // Retain the existing fields, constructor, scheduling, and processing logic.
+  private ready = true;
+  private stopped = false;
+  private readonly inFlightWork = new Set<Promise<void>>();
 
   beforeApplicationShutdown(): void {
-    this.stopAcceptingWork();
+    this.ready = false;
   }
 
-  onApplicationShutdown(): void {
-    this.stopAcceptingWork();
-  }
-
-  private stopAcceptingWork(): void {
-    this.acceptingWork = false;
+  async onApplicationShutdown(): Promise<void> {
+    this.ready = false;
+    this.stopped = true;
     for (const task of this.scheduledTasks) {
       task.cancel();
     }
     this.scheduledTasks.clear();
+    await Promise.all([...this.inFlightWork]);
   }
 }
 ```
 
-Update the existing processor shutdown test to call
-`beforeApplicationShutdown()` and retain its assertions that readiness is
-false, late scheduling throws, and timers do not run.
+Timer callbacks must transfer ownership from `scheduledTasks` to a tracked
+promise that remains registered through normal work and failure recovery.
+Internal timer registration reports whether it succeeded. If final shutdown
+starts while the starting phase is already in flight, a failed terminal-timer
+registration transitions the current `processing` payment to `failed` inside
+that same tracked execution.
+
+Add regressions proving:
+
+- early draining reports not ready but allows an already-admitted payment to
+  schedule and complete;
+- final shutdown waits for a held background read before resolving;
+- that race cannot leave a payment in `processing`;
+- final shutdown rejects late schedules with the existing error, cancels
+  queued timers, and remains idempotent after the early hook.
 
 - [ ] **Step 5: Update typed repository doubles**
 
@@ -794,6 +824,11 @@ isReady(): ReturnType<PaymentRepository['isReady']> {
 }
 ```
 
+In `test/payments.e2e-spec.ts` and `test/rate-limit.e2e-spec.ts`, make processor
+doubles include both lifecycle hooks, return a promise from the final hook, and
+use `satisfies Pick<PaymentProcessor, ...>` so future lifecycle changes fail at
+compile time instead of drifting silently.
+
 - [ ] **Step 6: Run focused and full unit verification**
 
 ```bash
@@ -802,15 +837,27 @@ isReady(): ReturnType<PaymentRepository['isReady']> {
 /Users/abdulafeezpifapp/.bun/bin/bun run lint
 /Users/abdulafeezpifapp/.bun/bin/bun run typecheck
 /Users/abdulafeezpifapp/.bun/bin/bun run test
+/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments rate-limit
+/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
+/Users/abdulafeezpifapp/.bun/bin/bun run build
 ```
 
-Expected: focused and complete unit suites PASS.
+Expected: focused processor and E2E regressions plus complete unit, E2E, and
+build verification PASS.
 
 - [ ] **Step 7: Commit the readiness boundary**
 
 ```bash
 git add src/payments/repositories/payment.repository.ts src/payments/repositories/in-memory-payment.repository.ts src/payments/processing/payment-processor.ts test/unit/payments/in-memory-payment.repository.spec.ts test/unit/payments/payments.service.spec.ts test/unit/payments/payment-processor.spec.ts
 git commit -m "feat(health): expose payment readiness signals"
+```
+
+After review of shutdown ordering, deliver the two-phase drain correction
+separately:
+
+```bash
+git add src/payments/processing/payment-processor.ts test/unit/payments/payment-processor.spec.ts test/payments.e2e-spec.ts test/rate-limit.e2e-spec.ts
+git commit -m "fix(processing): drain work during shutdown"
 ```
 
 ---
