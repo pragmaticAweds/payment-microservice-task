@@ -23,7 +23,7 @@ ts-jest, Supertest, Pino, Istanbul coverage reporters.
 ## Global Constraints
 
 - Work only on `codex/feat/payment-microservice`; do not modify `main`.
-- Use `/Users/abdulafeezpifapp/.bun/bin/bun` for Bun commands.
+- Use `bun` for Bun commands.
 - Do not add or update runtime or development dependencies.
 - Unit coverage thresholds are global: statements 85%, lines 85%, functions
   85%, and branches 80%.
@@ -476,7 +476,7 @@ Run the new focused tests once and confirm they pass against the current
 behavior:
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- logger.config global-exception.filter app.controller health.controller
+bun run test -- logger.config global-exception.filter app.controller health.controller
 ```
 
 Temporarily change one asserted production branch at a time—for example return
@@ -488,11 +488,11 @@ No temporary mutation may remain in `git diff`.
 - [ ] **Step 6: Run Task 1 verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- logger.config global-exception.filter app.controller health.controller
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run format
+bun run test -- logger.config global-exception.filter app.controller health.controller
+bun run test
+bun run lint
+bun run typecheck
 git diff --check
 ```
 
@@ -724,11 +724,11 @@ Expected: no matches.
 - [ ] **Step 7: Run Task 2 verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- processing health
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- --runInBand --detectOpenHandles
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run format
+bun run test:e2e -- processing health
+bun run test:e2e -- --runInBand --detectOpenHandles
+bun run lint
+bun run typecheck
 git diff --check
 ```
 
@@ -806,7 +806,7 @@ describe('unit coverage configuration', () => {
 - [ ] **Step 2: Run the contract and verify RED**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- coverage-config
+bun run test -- coverage-config
 ```
 
 Expected: FAIL because the three new exclusions, explicit reporters, and
@@ -851,8 +851,8 @@ module.exports = {
 - [ ] **Step 4: Run the contract and coverage gate GREEN**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- coverage-config
-/Users/abdulafeezpifapp/.bun/bin/bun run test:cov
+bun run test -- coverage-config
+bun run test:cov
 ```
 
 Expected: the contract passes and all four coverage percentages meet or exceed
@@ -864,7 +864,7 @@ Temporarily change `branches: 80` to `branches: 100` in both
 `jest.config.cjs` and the coverage-config test, then run:
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test:cov
+bun run test:cov
 ```
 
 Expected: unit tests pass, but Jest exits non-zero with a global branch
@@ -887,13 +887,13 @@ no generated coverage file appears in normal Git status.
 - [ ] **Step 7: Run Task 3 verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format:check
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
-/Users/abdulafeezpifapp/.bun/bin/bun run test:cov
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format:check
+bun run lint
+bun run typecheck
+bun run test
+bun run test:e2e
+bun run test:cov
+bun run build
 git diff --check
 ```
 
@@ -923,11 +923,11 @@ git commit -m "test(coverage): enforce coverage thresholds"
 - [ ] **Step 1: Run frozen dependency and static verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun install --frozen-lockfile
-/Users/abdulafeezpifapp/.bun/bin/bun run format:check
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun install --frozen-lockfile
+bun run format:check
+bun run lint
+bun run typecheck
+bun run build
 git diff --check
 ```
 
@@ -937,10 +937,10 @@ Record the exact Bun install/package counts and verify `package.json` and
 - [ ] **Step 2: Run all test gates with exact counts**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- --runInBand --detectOpenHandles
-/Users/abdulafeezpifapp/.bun/bin/bun run test:cov
+bun run test
+bun run test:e2e
+bun run test:e2e -- --runInBand --detectOpenHandles
+bun run test:cov
 ```
 
 Record exact suite/test totals, all four coverage percentages, and the absence
@@ -990,10 +990,8 @@ git commit -m "docs(checkpoints): record checkpoint 9 verification"
 git status --short --branch
 git log --oneline --decorate -12
 git remote -v
-git config --local --get core.sshCommand
 ```
 
 Expected: branch `codex/feat/payment-microservice`, clean worktree, no remote,
-the local SSH command still identifies `aweds-personal`, Checkpoint 9 remains
-`Awaiting user verification`, and no Checkpoint 10 work exists. Stop for user
-verification.
+Checkpoint 9 remains `Awaiting user verification`, and no Checkpoint 10 work
+exists. Stop for user verification.

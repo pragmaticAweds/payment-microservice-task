@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Work only on `codex/feat/payment-microservice`; do not modify `main`.
-- Use `/Users/abdulafeezpifapp/.bun/bin/bun` for every package script; do not use npm, pnpm, or yarn.
+- Use `bun` for every package script; do not use npm, pnpm, or yarn.
 - Keep the default NestJS Express adapter and the existing `{ "data": payment }` success envelope.
 - Preserve concurrency-safe `Idempotency-Key` behavior: only a fresh creation callback schedules work, while replays return the immutable original response.
 - Keep the payment aggregate free of NestJS, timer, hashing, and HTTP concerns.
@@ -172,7 +172,7 @@ it('accepts processing configuration boundary values', () => {
 - [ ] **Step 2: Run the focused tests and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- outcome runtime-config
+bun run test -- outcome runtime-config
 ```
 
 Expected: FAIL because the resolver modules do not exist.
@@ -239,10 +239,10 @@ export class DeterministicPaymentOutcomeResolver implements PaymentOutcomeResolv
 - [ ] **Step 5: Run focused and static verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- outcome runtime-config
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run test -- outcome runtime-config
+bun run format
+bun run lint
+bun run typecheck
 ```
 
 Expected: focused tests, lint, and type checking PASS.
@@ -312,7 +312,7 @@ describe('TimeoutProcessingScheduler', () => {
 - [ ] **Step 2: Run the scheduler test and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- timeout-processing
+bun run test -- timeout-processing
 ```
 
 Expected: FAIL because the scheduler adapter does not exist.
@@ -354,10 +354,10 @@ export class TimeoutProcessingScheduler implements ProcessingScheduler {
 - [ ] **Step 4: Run focused and static verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- timeout-processing
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run test -- timeout-processing
+bun run format
+bun run lint
+bun run typecheck
 ```
 
 Expected: scheduler tests, lint, and type checking PASS.
@@ -634,7 +634,7 @@ describe('PaymentProcessor', () => {
 - [ ] **Step 2: Run the processor test and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payment-processor
+bun run test -- payment-processor
 ```
 
 Expected: FAIL because `PaymentProcessor` does not exist.
@@ -839,10 +839,10 @@ export class PaymentProcessor implements OnApplicationShutdown {
 - [ ] **Step 4: Run processor and regression tests**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payment-processor payments
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run test -- payment-processor payments
+bun run format
+bun run lint
+bun run typecheck
 ```
 
 Expected: processor tests, existing payment tests, lint, and type checking PASS.
@@ -1092,8 +1092,8 @@ suite verifies the real background provider.
 - [ ] **Step 3: Run the integration tests and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payment-creation-idempotency payments.module
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- processing payments
+bun run test -- payment-creation-idempotency payments.module
+LOG_LEVEL=fatal bun run test:e2e -- processing payments
 ```
 
 Expected: FAIL because the module and fresh-creation callback do not yet wire
@@ -1174,12 +1174,12 @@ exports: [
 - [ ] **Step 7: Run focused and full verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- processor outcome payments
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- processing payments
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run test -- processor outcome payments
+LOG_LEVEL=fatal bun run test:e2e -- processing payments
+bun run format
+bun run lint
+bun run typecheck
+bun run build
 ```
 
 Expected: processor/outcome/payment unit tests, processing/payment E2E tests,
@@ -1208,7 +1208,7 @@ git commit -m "feat(processing): schedule new payment processing"
 - [ ] **Step 1: Verify the exact dependency state**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun install --frozen-lockfile
+bun install --frozen-lockfile
 ```
 
 Expected: Bun reports no lockfile or dependency changes.
@@ -1216,10 +1216,10 @@ Expected: Bun reports no lockfile or dependency changes.
 - [ ] **Step 2: Run every static and build gate**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format:check
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format:check
+bun run lint
+bun run typecheck
+bun run build
 git diff --check
 ```
 
@@ -1229,10 +1229,10 @@ errors.
 - [ ] **Step 3: Run focused and complete Jest suites**
 
 ```bash
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test -- processor outcome
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- processing
-LOG_LEVEL=fatal /Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
+LOG_LEVEL=fatal bun run test -- processor outcome
+LOG_LEVEL=fatal bun run test
+LOG_LEVEL=fatal bun run test:e2e -- processing
+LOG_LEVEL=fatal bun run test:e2e
 ```
 
 Expected: all focused and complete suites pass with zero failures and no

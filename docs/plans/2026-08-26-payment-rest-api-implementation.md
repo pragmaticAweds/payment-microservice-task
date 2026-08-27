@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Work only on `codex/feat/payment-microservice`; do not modify `main`.
-- Use `/Users/abdulafeezpifapp/.bun/bin/bun` because Bun 1.3.8 is not on this shell's default `PATH`.
+- Use `bun` because Bun 1.3.8 is not on this shell's default `PATH`.
 - Use Bun for dependency installation and every package script; do not use npm, pnpm, or yarn.
 - Keep `Payment` and its domain errors free of NestJS and HTTP imports.
 - Successful payment responses must be shaped as `{ "data": payment }`.
@@ -182,7 +182,7 @@ describe('PaymentsService', () => {
 Run:
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payments.service
+bun run test -- payments.service
 ```
 
 Expected: FAIL because the application error and service files do not exist.
@@ -298,9 +298,9 @@ moduleRef = await Test.createTestingModule({
 - [ ] **Step 6: Run focused and regression checks**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payments.service
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payments
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run test -- payments.service
+bun run test -- payments
+bun run typecheck
 ```
 
 Expected: all focused payment tests and type checking PASS.
@@ -614,8 +614,8 @@ it('returns 404 when transitioning an unknown payment', async () => {
 - [ ] **Step 3: Run both focused suites and confirm the red state**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- application-error.mapper
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments
+bun run test -- application-error.mapper
+bun run test:e2e -- payments
 ```
 
 Expected: FAIL because the mapper, DTOs, controller, and routes do not exist.
@@ -842,11 +842,11 @@ Register `PaymentsController` in the `controllers` array of `src/payments/paymen
 - [ ] **Step 8: Run formatting and focused verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- application-error.mapper
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run format
+bun run test -- application-error.mapper
+bun run test:e2e -- payments
+bun run lint
+bun run typecheck
 ```
 
 Expected: mapper tests, all payment REST flows, lint, and type checking PASS.
@@ -883,7 +883,7 @@ git commit -m "feat(api): expose versioned payment endpoints"
 - [ ] **Step 1: Install the NestJS Swagger integration with Bun**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun add @nestjs/swagger
+bun add @nestjs/swagger
 ```
 
 Verify that `package.json` records `@nestjs/swagger` under dependencies and that `bun.lock` is updated. Keep both changes uncommitted until the documented endpoints pass.
@@ -1011,7 +1011,7 @@ expect(
 - [ ] **Step 3: Run the Swagger-focused e2e tests and confirm the red state**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments
+bun run test:e2e -- payments
 ```
 
 Expected: FAIL with `404` for `/docs` and `/docs-json`.
@@ -1221,10 +1221,10 @@ Modify `configureApplication` in `src/app.setup.ts` so the order is Helmet, glob
 - [ ] **Step 7: Run the documentation tests and inspect the generated contract**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format
+bun run test:e2e -- payments
+bun run typecheck
+bun run build
 ```
 
 Expected: Swagger HTML and JSON tests PASS, documented paths include the global prefix and URI version, and the production build succeeds.
@@ -1252,8 +1252,8 @@ git commit -m "docs(swagger): document the payment API"
 - [ ] **Step 1: Verify the lockfile and formatting**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun install --frozen-lockfile
-/Users/abdulafeezpifapp/.bun/bin/bun run format:check
+bun install --frozen-lockfile
+bun run format:check
 ```
 
 Expected: the frozen install makes no dependency changes and formatting passes.
@@ -1261,9 +1261,9 @@ Expected: the frozen install makes no dependency changes and formatting passes.
 - [ ] **Step 2: Run static and production-build checks**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run lint
+bun run typecheck
+bun run build
 ```
 
 Expected: all three commands exit `0`.
@@ -1271,9 +1271,9 @@ Expected: all three commands exit `0`.
 - [ ] **Step 3: Run every test layer**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- payments
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
+bun run test -- payments
+bun run test
+bun run test:e2e
 ```
 
 Expected: payment-focused unit tests, the full unit suite, and all e2e suites pass with no open-handle warnings or unhandled rejections.

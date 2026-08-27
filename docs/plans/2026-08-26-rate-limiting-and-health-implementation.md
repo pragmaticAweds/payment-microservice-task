@@ -19,7 +19,7 @@ timers, and awaits tracked processing callbacks.
 ## Global constraints
 
 - Work only on `codex/feat/payment-microservice`; do not modify `main`.
-- Use `/Users/abdulafeezpifapp/.bun/bin/bun`; never use npm, pnpm, or yarn.
+- Use `bun`; never use npm, pnpm, or yarn.
 - Preserve NestJS's Express adapter, URI-versioned business routes, request IDs,
   Helmet, Pino redaction, and the global error envelope.
 - Keep operational routes exactly `/health/live` and `/health/ready`; do not
@@ -120,7 +120,7 @@ timers, and awaits tracked processing callbacks.
 - [ ] **Step 1: Install the NestJS throttler through Bun**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun add @nestjs/throttler@^6.5.0
+bun add @nestjs/throttler@^6.5.0
 ```
 
 `6.5.0` is the latest version published to the npm registry as of 2026-08-27,
@@ -266,7 +266,7 @@ describe('throttler configuration', () => {
 - [ ] **Step 3: Run the focused tests and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- runtime-config throttler
+bun run test -- runtime-config throttler
 ```
 
 Expected: FAIL because the cross-field validation and rate-limit modules do not
@@ -421,12 +421,12 @@ Add `RateLimitModule` to `src/app.module.ts` after `RuntimeConfigModule`.
 - [ ] **Step 7: Run focused and full verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- runtime-config throttler
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
+bun run format
+bun run test -- runtime-config throttler
+bun run lint
+bun run typecheck
+bun run test
+bun run test:e2e
 ```
 
 Expected: focused tests and all existing suites PASS.
@@ -582,7 +582,7 @@ describe('Rate limiting (e2e)', () => {
 - [ ] **Step 2: Run the suite and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- rate-limit
+bun run test:e2e -- rate-limit
 ```
 
 Expected: the general tests pass, but the stricter creation-policy test FAILS
@@ -656,11 +656,11 @@ decorate the create operation:
 - [ ] **Step 4: Run focused and regression verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- rate-limit
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
+bun run format
+bun run test:e2e -- rate-limit
+bun run test:e2e -- payments
+bun run lint
+bun run typecheck
 ```
 
 Expected: focused E2E, payment regression, lint, and type checking PASS.
@@ -720,7 +720,7 @@ it('reports ready until application shutdown begins', async () => {
 - [ ] **Step 2: Run the repository test and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- in-memory-payment.repository
+bun run test -- in-memory-payment.repository
 ```
 
 Expected: FAIL because the readiness methods do not exist.
@@ -886,14 +886,14 @@ admission boundary before scheduling.
 - [ ] **Step 6: Run focused and full unit verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- repository payments.service processor
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- payments rate-limit processing
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format
+bun run test -- repository payments.service processor
+bun run lint
+bun run typecheck
+bun run test
+bun run test:e2e -- payments rate-limit processing
+bun run test:e2e
+bun run build
 ```
 
 Expected: focused processor and E2E regressions plus complete unit, E2E, and
@@ -1173,8 +1173,8 @@ it('keeps health probes available after the API limit is exhausted', async () =>
 - [ ] **Step 3: Run the health tests and verify red**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- health
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- health
+bun run test -- health
+bun run test:e2e -- health
 ```
 
 Expected: FAIL because the health service, controller, and routes do not exist.
@@ -1418,12 +1418,12 @@ Add to the `DocumentBuilder` chain in `src/openapi/swagger.ts`:
 - [ ] **Step 8: Run health, throttle, Swagger, and regression checks**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- health repository
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- health rate-limit payments
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format
+bun run test -- health repository
+bun run test:e2e -- health rate-limit payments
+bun run lint
+bun run typecheck
+bun run build
 ```
 
 Expected: all focused tests, lint, type checking, and build PASS.
@@ -1446,7 +1446,7 @@ git commit -m "feat(health): add readiness and liveness probes"
 - [ ] **Step 1: Run the clean dependency check**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun install --frozen-lockfile
+bun install --frozen-lockfile
 ```
 
 Expected: install succeeds without changing `package.json` or `bun.lock`.
@@ -1454,10 +1454,10 @@ Expected: install succeeds without changing `package.json` or `bun.lock`.
 - [ ] **Step 2: Run all static verification**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run format:check
-/Users/abdulafeezpifapp/.bun/bin/bun run lint
-/Users/abdulafeezpifapp/.bun/bin/bun run typecheck
-/Users/abdulafeezpifapp/.bun/bin/bun run build
+bun run format:check
+bun run lint
+bun run typecheck
+bun run build
 git diff --check
 ```
 
@@ -1466,8 +1466,8 @@ Expected: every command exits zero.
 - [ ] **Step 3: Run focused tests**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test -- health throttler repository
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e -- health rate-limit
+bun run test -- health throttler repository
+bun run test:e2e -- health rate-limit
 ```
 
 Expected: all focused unit and E2E suites PASS.
@@ -1475,8 +1475,8 @@ Expected: all focused unit and E2E suites PASS.
 - [ ] **Step 4: Run complete regression suites**
 
 ```bash
-/Users/abdulafeezpifapp/.bun/bin/bun run test
-/Users/abdulafeezpifapp/.bun/bin/bun run test:e2e
+bun run test
+bun run test:e2e
 ```
 
 Expected: all unit and E2E suites PASS with no open handles or unhandled
@@ -1487,7 +1487,7 @@ rejections.
 Start the service on an unused port:
 
 ```bash
-PORT=3108 /Users/abdulafeezpifapp/.bun/bin/bun run start
+PORT=3108 bun run start
 ```
 
 Verify `/docs-json` contains `/health/live`, `/health/ready`, and the payment

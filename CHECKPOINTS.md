@@ -85,19 +85,19 @@ The exact number of commits may change when a checkpoint contains more than one 
 
 ## Progress summary
 
-| Checkpoint | Description                                               | Status                     |
-| ---------- | --------------------------------------------------------- | -------------------------- |
-| 1          | Desktop workspace, Git, Bun, and `aweds-personal` binding | Completed                  |
-| 2          | NestJS/Express scaffold and project boundaries            | Completed                  |
-| 3          | Configuration, logging, validation, errors, and shutdown  | Completed                  |
-| 4          | Payment domain, state machine, and persistence            | Completed                  |
-| 5          | REST API and complete Swagger documentation               | Completed                  |
-| 6          | Concurrency-safe idempotency                              | Completed                  |
-| 7          | Asynchronous deterministic payment processing             | Completed                  |
-| 8          | Rate limiting and health endpoints                        | Completed                  |
-| 9          | Jest unit/e2e tests and coverage enforcement              | Awaiting user verification |
-| 10         | Docker, CI, README, and final local verification          | Not started                |
-| 11         | GitHub remote verification and approved publication       | Not started                |
+| Checkpoint | Description                                              | Status                     |
+| ---------- | -------------------------------------------------------- | -------------------------- |
+| 1          | Local workspace, Git, and Bun                            | Completed                  |
+| 2          | NestJS/Express scaffold and project boundaries           | Completed                  |
+| 3          | Configuration, logging, validation, errors, and shutdown | Completed                  |
+| 4          | Payment domain, state machine, and persistence           | Completed                  |
+| 5          | REST API and complete Swagger documentation              | Completed                  |
+| 6          | Concurrency-safe idempotency                             | Completed                  |
+| 7          | Asynchronous deterministic payment processing            | Completed                  |
+| 8          | Rate limiting and health endpoints                       | Completed                  |
+| 9          | Jest unit/e2e tests and coverage enforcement             | Awaiting user verification |
+| 10         | Docker, CI, README, and final local verification         | Not started                |
+| 11         | GitHub remote verification and approved publication      | Not started                |
 
 ---
 
@@ -105,20 +105,17 @@ The exact number of commits may change when a checkpoint contains more than one 
 
 ### Work
 
-- Use `/Users/abdulafeezpifapp/Desktop/node-payment-microservice` as the project root.
+- Use `/node-payment-microservice` as the documented project root.
 - Initialize a Git repository with `main` as the initial branch.
 - Create and switch to `codex/feat/payment-microservice` before implementation.
 - Configure the repository locally to use Bun 1.3.8.
-- Bind Git SSH operations to `/Users/abdulafeezpifapp/.dss/spaces/aweds-personal/id_rsa` through repository-local Git configuration.
-- Confirm the public-key fingerprint without exposing private-key material.
 - Do not create or push a GitHub repository yet.
 
 ### Acceptance criteria
 
-- The project directory exists on the Desktop.
+- The project directory exists at the documented `/node-payment-microservice` path.
 - `main` exists as the untouched stable branch.
 - The active implementation branch is `codex/feat/payment-microservice`.
-- `git config --local core.sshCommand` resolves to the `aweds-personal` key.
 - `bun --version` returns `1.3.8`.
 - No remote repository or external side effect has been created.
 
@@ -128,7 +125,6 @@ The exact number of commits may change when a checkpoint contains more than one 
 pwd
 git status --short --branch
 git branch --show-current
-git config --local --get core.sshCommand
 bun --version
 git remote -v
 git log --oneline --decorate -5
@@ -437,7 +433,7 @@ bun run typecheck
 - A built service started through Bun on `PORT=3108`: `/health/live` returned `200 {"data":{"status":"live"}}`; `/health/ready` returned `200 {"data":{"status":"ready","checks":{"repository":"ready","processor":"ready"}}}`; `/api/v1/health/live` returned the standard `404 NOT_FOUND` envelope; `/docs-json` returned `200`.
 - The downloaded document parsed as OpenAPI 3.0.0, contained `/health/live` and `/health/ready` but no `/api/v1/health/*` path, documented `429` on `POST /api/v1/payments`, documented liveness `200` and readiness `200`/`503`, and included the `Health` tag.
 - The runtime process was stopped after verification and left no listener on port 3108.
-- Verification ran on `codex/feat/payment-microservice` with a clean worktree, no Git remote, and the repository-local SSH command still bound to `aweds-personal`; no private-key contents were read or displayed.
+- Verification ran on `codex/feat/payment-microservice` with a clean worktree and no Git remote.
 
 ---
 
@@ -495,7 +491,7 @@ bun run test:cov
 - `bun run test:cov`: 19 suites, 129 tests passed at 97.91% statements, 84.83% branches, 95.74% functions, and 97.76% lines. The sandbox-only report-write `EPERM` result was discarded and the identical command passed while creating the required ignored artifacts.
 - `coverage/lcov.info` and `coverage/index.html` exist and `git check-ignore` identifies both as ignored; neither appears in Git status.
 - `rg -n "waitForTerminalStatus|Date\\.now\\(\\) \\+|setTimeout" test/processing.e2e-spec.ts` exited `1` with no output, confirming the prohibited real-time polling patterns are absent.
-- Verification ran on `codex/feat/payment-microservice` from implementation commit `65eea94`, with no Git remote and the repository-local SSH command still identifying `aweds-personal`; no private-key contents were read or displayed.
+- Verification ran on `codex/feat/payment-microservice` from implementation commit `65eea94` with no Git remote.
 
 ---
 
@@ -534,19 +530,18 @@ docker build -t node-payment-microservice .
 
 ---
 
-## Checkpoint 11 — GitHub binding and publication
+## Checkpoint 11 — GitHub remote and publication
 
 ### Work
 
-- Reconfirm that repository SSH operations use the `aweds-personal` private key.
 - Determine and verify the intended personal GitHub account and repository name.
-- Configure the SSH remote using the verified account/repository.
+- Configure the Git remote using the verified account/repository.
 - Verify authentication and remote visibility without exposing credentials.
 - Push only after explicit user approval at this checkpoint.
 
 ### Acceptance criteria
 
-- Commit authorship and SSH identity are correct.
+- Commit authorship is correct.
 - The remote points to the intended personal GitHub repository.
 - The default branch is `main`.
 - The repository contains no secrets, generated coverage output, or build artifacts.
@@ -555,7 +550,6 @@ docker build -t node-payment-microservice .
 ### Verification
 
 ```bash
-git config --local --get core.sshCommand
 git status --short --branch
 git remote -v
 git log -1 --show-signature --format=fuller
