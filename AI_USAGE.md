@@ -1,24 +1,12 @@
 # AI Usage Disclosure
 
 This file summarizes the AI-assisted implementation decisions and command-line
-checks used while developing the Node.js payment microservice. Machine-specific
-paths, account bindings, credentials, and private key details are intentionally
-omitted.
-
-## Tools used
-
-- OpenAI Codex assisted with requirement analysis, architecture, implementation,
-  tests, documentation, refactoring, Git checkpoints, code review, security/QA
-  review, and final verification.
-
-No AI output was accepted as sufficient evidence on its own. Changes were
-reviewed against the assessment, exercised through automated tests, and checked
-with formatting, linting, type-checking, build, dependency-audit, coverage, and
-runtime verification commands.
+checks used while developing the Node.js payment microservice.
 
 ## Implementation decision record
 
-The following entries record technical decisions made during implementation.
+The following entries record technical decisions made during implementation. With user requesting for breakdown of problem into actionable checkpoints, while instructing codex on the structure, technologies and, pattern to use.
+
 Minor spelling is retained where a direct instruction is quoted.
 
 ### Payment contract decisions
@@ -48,7 +36,7 @@ Minor spelling is retained where a direct instruction is quoted.
 11. "I expect api to be prefix, instead of blank 4040/.... it should be
     /api/4040/....."
 12. "yes, versioning should also apply to all too"
-13. "api/v1/ should apply to alll"
+13. "api/v1/ should apply to all"
 14. "yes, but I need to indicate if status is success or not, I also believe its
     different for the status inside the data"
 15. "correct"
@@ -171,14 +159,4 @@ git status --short --branch
 
 Temporary diagnostic commands were also used to run focused Jest suites, inspect
 tracked source, verify ignored artifacts, inspect Git diffs/history, retrieve the
-user-provided assessment as CSV, and smoke-test the compiled HTTP service. No
-credentials, environment secrets, generated coverage output, build output, or
-machine-specific paths are tracked.
-
-## Repository review
-
-The reviewer should confirm that:
-
-- this disclosure reflects the final repository state;
-- every command in the README passes on the reviewed commit; and
-- the remote repository URL points to that same verified commit.
+user-provided assessment as CSV, and smoke-test the compiled HTTP service.
