@@ -50,23 +50,23 @@ function normalizeDescription(description?: string): string | undefined {
 
 export class Payment {
   readonly id: string;
-  readonly smallestUnitAmount: number;
-  readonly currency: PaymentCurrency;
-  readonly merchantReference: string;
-  readonly description?: string;
-  readonly status: PaymentStatus;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly description?: string;
+  readonly status: PaymentStatus;
+  readonly merchantReference: string;
+  readonly currency: PaymentCurrency;
+  readonly smallestUnitAmount: number;
 
   private constructor(properties: PaymentProperties) {
     this.id = properties.id;
-    this.smallestUnitAmount = properties.smallestUnitAmount;
-    this.currency = properties.currency;
-    this.merchantReference = properties.merchantReference;
-    this.description = properties.description;
     this.status = properties.status;
+    this.currency = properties.currency;
     this.createdAt = properties.createdAt;
     this.updatedAt = properties.updatedAt;
+    this.description = properties.description;
+    this.merchantReference = properties.merchantReference;
+    this.smallestUnitAmount = properties.smallestUnitAmount;
 
     Object.freeze(this);
   }
@@ -89,13 +89,13 @@ export class Payment {
 
     return new Payment({
       id: randomUUID(),
-      smallestUnitAmount: input.smallestUnitAmount,
-      currency: PAYMENT_CURRENCY.USD,
-      merchantReference: normalizeMerchantReference(input.merchantReference),
-      description: normalizeDescription(input.description),
-      status: PAYMENT_STATUS.PENDING,
       createdAt: timestamp,
       updatedAt: timestamp,
+      status: PAYMENT_STATUS.PENDING,
+      currency: PAYMENT_CURRENCY.USD,
+      smallestUnitAmount: input.smallestUnitAmount,
+      description: normalizeDescription(input.description),
+      merchantReference: normalizeMerchantReference(input.merchantReference),
     });
   }
 

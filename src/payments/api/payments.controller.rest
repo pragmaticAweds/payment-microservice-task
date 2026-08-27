@@ -10,8 +10,8 @@ Idempotency-Key: {{idempotencyKey}}
 X-Request-Id: rest-payment-create
 
 {
-  "smallestUnitAmount": 1050,
   "currency": "USD",
+  "smallestUnitAmount": 1050,
   "merchantReference": "rest-order-0001",
   "description": "Controller REST request"
 }
