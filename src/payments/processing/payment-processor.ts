@@ -38,7 +38,9 @@ export class PaymentProcessor
 {
   private readonly delayMs: number;
   private readonly scheduledTasks = new Set<ScheduledProcessingTask>();
-  private acceptingWork = true;
+  private readonly inFlightWork = new Set<Promise<void>>();
+  private ready = true;
+  private stopped = false;
 
   constructor(
     private readonly payments: PaymentsService,
@@ -53,7 +55,7 @@ export class PaymentProcessor
   }
 
   schedule(payment: Payment, idempotencyKey: string): void {
-    if (!this.acceptingWork) {
+    if (this.stopped) {
       throw new Error('Payment processor is not accepting work');
     }
 
@@ -80,32 +82,33 @@ export class PaymentProcessor
   }
 
   isReady(): boolean {
-    return this.acceptingWork;
+    return this.ready;
   }
 
   beforeApplicationShutdown(): void {
-    this.stopAcceptingWork();
+    this.ready = false;
   }
 
-  onApplicationShutdown(): void {
-    this.stopAcceptingWork();
-  }
-
-  private stopAcceptingWork(): void {
-    this.acceptingWork = false;
-    for (const task of this.scheduledTasks) {
-      task.cancel();
+  async onApplicationShutdown(): Promise<void> {
+    this.ready = false;
+    if (!this.stopped) {
+      this.stopped = true;
+      for (const task of this.scheduledTasks) {
+        task.cancel();
+      }
+      this.scheduledTasks.clear();
     }
-    this.scheduledTasks.clear();
+
+    await Promise.all([...this.inFlightWork]);
   }
 
   private register(
     delayMs: number,
     context: ProcessingContext,
     work: () => Promise<void>,
-  ): void {
-    if (!this.acceptingWork) {
-      return;
+  ): boolean {
+    if (this.stopped) {
+      return false;
     }
 
     let scheduled: ScheduledProcessingTask | undefined = undefined;
@@ -113,9 +116,17 @@ export class PaymentProcessor
       if (scheduled !== undefined) {
         this.scheduledTasks.delete(scheduled);
       }
-      void work().catch((error: unknown) => this.handleFailure(context, error));
+      const processing = Promise.resolve()
+        .then(work)
+        .catch((error: unknown) => this.handleFailure(context, error));
+      this.inFlightWork.add(processing);
+      void processing.then(
+        () => this.inFlightWork.delete(processing),
+        () => this.inFlightWork.delete(processing),
+      );
     });
     this.scheduledTasks.add(scheduled);
+    return true;
   }
 
   private async startProcessing(context: ProcessingContext): Promise<void> {
@@ -141,9 +152,12 @@ export class PaymentProcessor
       phase: 'completing',
       startedAt: Date.now(),
     };
-    this.register(this.delayMs, terminalContext, () =>
+    const registered = this.register(this.delayMs, terminalContext, () =>
       this.completeProcessing(terminalContext),
     );
+    if (!registered) {
+      await this.transitionActivePaymentToFailed(context.paymentId);
+    }
   }
 
   private async completeProcessing(context: ProcessingContext): Promise<void> {
@@ -188,16 +202,7 @@ export class PaymentProcessor
     );
 
     try {
-      let current = await this.payments.findById(context.paymentId);
-      if (current.status === PaymentStatus.PENDING) {
-        current = await this.payments.transition(
-          context.paymentId,
-          PaymentStatus.PROCESSING,
-        );
-      }
-      if (current.status === PaymentStatus.PROCESSING) {
-        await this.payments.transition(context.paymentId, PaymentStatus.FAILED);
-      }
+      await this.transitionActivePaymentToFailed(context.paymentId);
     } catch (recoveryError) {
       this.logger.error(
         {
@@ -210,6 +215,21 @@ export class PaymentProcessor
         },
         'Payment processing recovery failed',
       );
+    }
+  }
+
+  private async transitionActivePaymentToFailed(
+    paymentId: string,
+  ): Promise<void> {
+    let current = await this.payments.findById(paymentId);
+    if (current.status === PaymentStatus.PENDING) {
+      current = await this.payments.transition(
+        paymentId,
+        PaymentStatus.PROCESSING,
+      );
+    }
+    if (current.status === PaymentStatus.PROCESSING) {
+      await this.payments.transition(paymentId, PaymentStatus.FAILED);
     }
   }
 }

@@ -44,6 +44,53 @@ class ToggleFailureRepository implements PaymentRepository {
   }
 }
 
+interface DeferredSignal {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
+function createDeferredSignal(): DeferredSignal {
+  let resolve = (): void => undefined;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
+
+class BlockingReadRepository implements PaymentRepository {
+  private readonly delegate = new InMemoryPaymentRepository();
+  private heldRead:
+    { started: DeferredSignal; released: DeferredSignal } | undefined;
+
+  save(payment: Parameters<PaymentRepository['save']>[0]): Promise<void> {
+    return this.delegate.save(payment);
+  }
+
+  async findById(id: string): ReturnType<PaymentRepository['findById']> {
+    const heldRead = this.heldRead;
+    if (heldRead !== undefined) {
+      this.heldRead = undefined;
+      heldRead.started.resolve();
+      await heldRead.released.promise;
+    }
+
+    return this.delegate.findById(id);
+  }
+
+  isReady(): Promise<boolean> {
+    return this.delegate.isReady();
+  }
+
+  holdNextRead(): { started: Promise<void>; release: () => void } {
+    const started = createDeferredSignal();
+    const released = createDeferredSignal();
+    this.heldRead = { started, released };
+
+    return { started: started.promise, release: released.resolve };
+  }
+}
+
 describe('PaymentProcessor', () => {
   const input = {
     smallestUnitAmount: 1050,
@@ -273,12 +320,56 @@ describe('PaymentProcessor', () => {
     expect(recoveryFailureLog?.err).toBeInstanceOf(Error);
   });
 
-  it('cancels outstanding work and rejects new work during shutdown', async () => {
+  it('reports an early drain while allowing admitted work to complete', async () => {
+    const { payments, processor } = createHarness();
+    const payment = await payments.create(input);
+
+    processor.beforeApplicationShutdown();
+
+    expect(processor.isReady()).toBe(false);
+    expect(() => processor.schedule(payment, 'draining-key')).not.toThrow();
+    await jest.runAllTimersAsync();
+    await expect(payments.findById(payment.id)).resolves.toMatchObject({
+      status: PaymentStatus.SUCCEEDED,
+    });
+  });
+
+  it('awaits in-flight work and fails processing when final shutdown blocks its terminal timer', async () => {
+    const repository = new BlockingReadRepository();
+    const { payments, processor } = createHarness({ repository });
+    const payment = await payments.create(input);
+    const heldRead = repository.holdNextRead();
+    processor.schedule(payment, 'in-flight-shutdown-key');
+    await jest.advanceTimersByTimeAsync(0);
+    await heldRead.started;
+
+    let shutdownSettled = false;
+    const shutdown = Promise.resolve(processor.onApplicationShutdown()).then(
+      () => {
+        shutdownSettled = true;
+      },
+    );
+    await Promise.resolve();
+    const settledBeforeRelease = shutdownSettled;
+
+    heldRead.release();
+    await shutdown;
+    await jest.runAllTimersAsync();
+
+    expect(settledBeforeRelease).toBe(false);
+    await expect(payments.findById(payment.id)).resolves.toMatchObject({
+      status: PaymentStatus.FAILED,
+    });
+  });
+
+  it('cancels queued work and rejects new schedules during final shutdown', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
     processor.schedule(payment, 'shutdown-key');
 
     processor.beforeApplicationShutdown();
+    await processor.onApplicationShutdown();
+    await processor.onApplicationShutdown();
 
     expect(processor.isReady()).toBe(false);
     expect(() => processor.schedule(payment, 'late-key')).toThrow(

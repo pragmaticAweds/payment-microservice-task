@@ -76,8 +76,15 @@ describe('Rate limiting (e2e)', () => {
       .useValue({
         schedule: () => undefined,
         isReady: () => true,
-        onApplicationShutdown: () => undefined,
-      })
+        beforeApplicationShutdown: () => undefined,
+        onApplicationShutdown: () => Promise.resolve(),
+      } satisfies Pick<
+        PaymentProcessor,
+        | 'schedule'
+        | 'isReady'
+        | 'beforeApplicationShutdown'
+        | 'onApplicationShutdown'
+      >)
       .compile();
 
     app = moduleFixture.createNestApplication();
