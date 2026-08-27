@@ -94,7 +94,7 @@ bun install --frozen-lockfile
 bun run start:dev
 ```
 
-The API listens on `http://localhost:3000` by default. Build and run the compiled
+The API listens on `http://localhost:4040` by default. Build and run the compiled
 application with:
 
 ```bash
@@ -111,7 +111,7 @@ service with a clear error instead of allowing a partially configured process.
 | ------------------------------- | --------------------------- | ------------------------------------------------------ |
 | `NODE_ENV`                      | `development`               | `development`, `test`, or `production`                 |
 | `SERVICE_NAME`                  | `node-payment-microservice` | Service name attached to structured logs               |
-| `PORT`                          | `3000`                      | Integer from 1 through 65535                           |
+| `PORT`                          | `4040`                      | Integer from 1 through 65535                           |
 | `LOG_LEVEL`                     | `info`                      | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`  |
 | `PROCESSING_DELAY_MS`           | `1000`                      | Non-negative integer processing delay                  |
 | `SIMULATED_SUCCESS_RATE`        | `0.8`                       | Number from 0 through 1                                |
@@ -146,7 +146,7 @@ version `v1`; health and documentation routes are intentionally unversioned.
 means cents, so `1050` represents `$10.50`.
 
 ```bash
-curl --include --request POST http://localhost:3000/api/v1/payments \
+curl --include --request POST http://localhost:4040/api/v1/payments \
   --header 'Content-Type: application/json' \
   --header 'Idempotency-Key: order-2026-0001-attempt-1' \
   --header 'X-Request-Id: docs-create-payment' \
@@ -190,7 +190,7 @@ Blank descriptions are normalized away. Unknown body properties are rejected.
 
 ```bash
 curl --include \
-  http://localhost:3000/api/v1/payments/4fa85f64-5717-4562-b3fc-2c963f66afa6
+  http://localhost:4040/api/v1/payments/4fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 An invalid UUID returns `400`; an unknown valid UUID returns `404`.
@@ -199,7 +199,7 @@ An invalid UUID returns `400`; an unknown valid UUID returns `404`.
 
 ```bash
 curl --include --request PATCH \
-  http://localhost:3000/api/v1/payments/4fa85f64-5717-4562-b3fc-2c963f66afa6/status \
+  http://localhost:4040/api/v1/payments/4fa85f64-5717-4562-b3fc-2c963f66afa6/status \
   --header 'Content-Type: application/json' \
   --data '{"status":"processing"}'
 ```
@@ -258,7 +258,7 @@ deployment should use shared, atomic storage.
 Liveness confirms that the process is serving requests:
 
 ```bash
-curl http://localhost:3000/health/live
+curl http://localhost:4040/health/live
 ```
 
 ```json
@@ -268,7 +268,7 @@ curl http://localhost:3000/health/live
 Readiness checks both the repository and asynchronous processor:
 
 ```bash
-curl http://localhost:3000/health/ready
+curl http://localhost:4040/health/ready
 ```
 
 ```json
@@ -290,8 +290,8 @@ the service cannot accept payment work, including during shutdown.
 
 With the service running:
 
-- Swagger UI: `http://localhost:3000/docs`
-- OpenAPI JSON: `http://localhost:3000/docs-json`
+- Swagger UI: `http://localhost:4040/docs`
+- OpenAPI JSON: `http://localhost:4040/docs-json`
 
 The specification documents DTO constraints, examples, the required idempotency
 header, the optional correlation header, response headers, rate limits, and error

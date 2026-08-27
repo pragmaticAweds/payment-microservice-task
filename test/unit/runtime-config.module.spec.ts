@@ -5,7 +5,7 @@ describe('validateEnvironment', () => {
     expect(validateEnvironment({})).toMatchObject({
       NODE_ENV: 'development',
       SERVICE_NAME: 'node-payment-microservice',
-      PORT: 3000,
+      PORT: 4040,
       LOG_LEVEL: 'info',
       PROCESSING_DELAY_MS: 1000,
       SIMULATED_SUCCESS_RATE: 0.8,
@@ -13,6 +13,12 @@ describe('validateEnvironment', () => {
       THROTTLE_LIMIT: 100,
       PAYMENT_CREATE_THROTTLE_LIMIT: 10,
       IDEMPOTENCY_TTL_MS: 86_400_000,
+    });
+  });
+
+  it('accepts an explicit port override', () => {
+    expect(validateEnvironment({ PORT: '5050' })).toMatchObject({
+      PORT: 5050,
     });
   });
 
