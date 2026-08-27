@@ -478,23 +478,24 @@ bun run test:cov
 - `GlobalExceptionFilter` unit tests cover string and object HTTP exceptions, validation detail preservation, normalized error codes, mapped application errors with and without details, safe `500` envelopes for unexpected `Error` and non-`Error` values, structured warning/error logging, request IDs, timestamps, and paths without leaking internal failures to clients.
 - Thin controller tests verify that the application and readiness controllers delegate to their services without adding behavior.
 - Processing E2E tests inject a controlled implementation through `PROCESSING_SCHEDULER`, explicitly release the zero-delay start and configured `25` ms or `10` ms terminal callbacks, and prove deterministic success, deterministic failure, and replay without a third scheduled callback; no test waits for real processing time or random outcomes.
+- Payment status changes use one atomic repository operation for domain validation and persistence. A real-service concurrency regression proves exactly one competing terminal transition succeeds and the rejected transition cannot overwrite it; a controlled E2E race pauses a manual terminal PATCH at the repository boundary, lets processor completion win, verifies the PATCH receives `409 INVALID_PAYMENT_TRANSITION`, and confirms the stored terminal status remains unchanged.
 - Readiness E2E coverage makes the real repository dependency reject once, verifies the exact `503 SERVICE_NOT_READY` envelope with repository `not_ready` and processor `ready`, checks request-ID/path/timestamp behavior and secret non-disclosure, and restores the dependency spy.
 - Unit coverage collects `src/**/*.{ts,js}` and excludes only `src/main.ts`, module metadata, `src/app.setup.ts`, `src/openapi/swagger.ts`, and DTO files; E2E remains a separate mandatory gate.
 - Jest emits `text`, `lcov`, and `html` reports and enforces global minimums of 85% statements, 80% branches, 85% functions, and 85% lines. A temporary 100% branch threshold made `test:cov` fail while all 126 tests passed, proving threshold enforcement before the approved 80% value was restored.
 - Design and plan commits: `2b1dea22b2bd1dfb34da55291eb8b90be5643963 docs(testing): define coverage enforcement`; `41c81a129b10efe0a5d67e0d1a5d444fb7a36f13 docs(testing): add coverage implementation plan`.
-- Test implementation commits: `0ffda1cd4a1165bd938288b8875ca98276a172b2 test(errors): cover logging and exception behavior`; `9760e9807ed86d01a9a5057d8e6d41da340c9267 test(e2e): cover deterministic service flows`; `5563a10ec342b59967a36c4e2af6c67a52d7e26f test(coverage): enforce coverage thresholds`.
+- Test implementation commits: `0ffda1cd4a1165bd938288b8875ca98276a172b2 test(errors): cover logging and exception behavior`; `9760e9807ed86d01a9a5057d8e6d41da340c9267 test(e2e): cover deterministic service flows`; `5563a10ec342b59967a36c4e2af6c67a52d7e26f test(coverage): enforce coverage thresholds`; `65eea94b9eaa8bb5e9f681ce95893776b3956834 fix(payments): make status transitions atomic`.
 
 ### Verification evidence — 2026-08-27
 
 - `bun install --frozen-lockfile`: Bun 1.3.8 checked 734 installs across 709 packages with no changes; `package.json` and `bun.lock` retained SHA-256 hashes `c2846fe47cd54b6171e523d2010f50108be0903ee44d63498782b2fc977030ae` and `904672b8df3f699880cec05798d52c3c923a85e64ccd7ff75e1c4f7eb925e389` respectively.
 - `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run build`, and `git diff --check`: exited successfully.
-- `bun run test`: 19 suites, 126 tests passed.
-- `bun run test:e2e`: 6 suites, 60 tests passed. The sandbox-only `listen EPERM` result was discarded and the identical command passed with temporary loopback-socket permission.
-- `bun run test:e2e -- --runInBand --detectOpenHandles`: 6 suites, 60 tests passed with no open-handle or unhandled-rejection warnings.
-- `bun run test:cov`: 19 suites, 126 tests passed at 97.88% statements, 84.58% branches, 95.69% functions, and 97.73% lines. The sandbox-only report-write `EPERM` result was discarded and the identical command passed while creating the required ignored artifacts.
+- `bun run test`: 19 suites, 129 tests passed.
+- `bun run test:e2e`: 6 suites, 61 tests passed. The sandbox-only `listen EPERM` result was discarded and the identical command passed with temporary loopback-socket permission.
+- `bun run test:e2e -- --runInBand --detectOpenHandles`: 6 suites, 61 tests passed with no open-handle or unhandled-rejection warnings.
+- `bun run test:cov`: 19 suites, 129 tests passed at 97.91% statements, 84.83% branches, 95.74% functions, and 97.76% lines. The sandbox-only report-write `EPERM` result was discarded and the identical command passed while creating the required ignored artifacts.
 - `coverage/lcov.info` and `coverage/index.html` exist and `git check-ignore` identifies both as ignored; neither appears in Git status.
 - `rg -n "waitForTerminalStatus|Date\\.now\\(\\) \\+|setTimeout" test/processing.e2e-spec.ts` exited `1` with no output, confirming the prohibited real-time polling patterns are absent.
-- Verification ran on `codex/feat/payment-microservice` from clean implementation commit `5563a10`, with no Git remote and the repository-local SSH command still identifying `aweds-personal`; no private-key contents were read or displayed.
+- Verification ran on `codex/feat/payment-microservice` from implementation commit `65eea94`, with no Git remote and the repository-local SSH command still identifying `aweds-personal`; no private-key contents were read or displayed.
 
 ---
 
