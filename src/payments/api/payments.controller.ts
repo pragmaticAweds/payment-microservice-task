@@ -80,6 +80,18 @@ const CREATE_PAYMENT_RESPONSE_HEADERS = {
 
 const CREATE_PAYMENT_RATE_LIMIT_ERROR_HEADERS = {
   ...REQUEST_ID_RESPONSE_HEADERS,
+  'X-RateLimit-Limit': {
+    description: 'Maximum requests allowed by the policy that was exceeded',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Remaining': {
+    description: 'Requests remaining for the policy that was exceeded',
+    schema: { type: 'integer' },
+  },
+  'X-RateLimit-Reset': {
+    description: 'Seconds until the policy that was exceeded resets',
+    schema: { type: 'integer' },
+  },
   'Retry-After': {
     description: 'Seconds until the exceeded policy accepts another request',
     schema: { type: 'integer' },

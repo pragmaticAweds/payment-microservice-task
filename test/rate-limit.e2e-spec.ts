@@ -18,6 +18,12 @@ interface ErrorResponseBody {
   path: string;
 }
 
+interface PaymentResponseBody {
+  data: {
+    id: string;
+  };
+}
+
 interface OpenApiResponse {
   content?: Record<
     string,
@@ -105,6 +111,25 @@ describe('Rate limiting (e2e)', () => {
     expect(response.headers['x-request-id']).toBe(expectedRequestId);
   }
 
+  function expectBoundedSecondsHeader(
+    response: Response,
+    headerName: string,
+  ): number {
+    const rawValue = response.headers[headerName] as unknown;
+
+    expect(typeof rawValue).toBe('string');
+    if (typeof rawValue !== 'string') {
+      throw new Error(`Expected ${headerName} to be a string response header`);
+    }
+
+    const durationSeconds = Number(rawValue);
+    expect(Number.isInteger(durationSeconds)).toBe(true);
+    expect(durationSeconds).toBeGreaterThan(0);
+    expect(durationSeconds).toBeLessThanOrEqual(60);
+
+    return durationSeconds;
+  }
+
   it('allows normal traffic through the general limit before returning a standard 429 response', async () => {
     for (let requestNumber = 1; requestNumber <= 3; requestNumber += 1) {
       const response = await request(app!.getHttpServer())
@@ -127,11 +152,17 @@ describe('Rate limiting (e2e)', () => {
   });
 
   it('applies the stricter payment creation policy only to the create handler', async () => {
-    await request(app!.getHttpServer())
+    const created = await request(app!.getHttpServer())
       .post('/api/v1/payments')
       .set('Idempotency-Key', 'rate-limit-create-key-1')
       .send(validRequest)
       .expect(201);
+    const createdBody = created.body as PaymentResponseBody;
+
+    expect(typeof createdBody.data.id).toBe('string');
+    expect(created.headers['x-ratelimit-limit-payment-create']).toBe('1');
+    expect(created.headers['x-ratelimit-remaining-payment-create']).toBe('0');
+    expectBoundedSecondsHeader(created, 'x-ratelimit-reset-payment-create');
 
     const requestId = 'payment-create-rate-limit-request';
     const path = '/api/v1/payments';
@@ -146,10 +177,26 @@ describe('Rate limiting (e2e)', () => {
       .expect(429);
 
     expectRateLimitEnvelope(response, requestId, path);
-    expect(response.headers['retry-after']).toBeDefined();
     expect(response.headers['x-ratelimit-limit']).toBe('1');
     expect(response.headers['x-ratelimit-remaining']).toBe('0');
-    expect(response.headers['retry-after-payment-create']).toBeDefined();
+    const retryAfterSeconds = expectBoundedSecondsHeader(
+      response,
+      'retry-after',
+    );
+    const namedRetryAfterSeconds = expectBoundedSecondsHeader(
+      response,
+      'retry-after-payment-create',
+    );
+    expect(retryAfterSeconds).toBe(namedRetryAfterSeconds);
+
+    const retrieved = await request(app!.getHttpServer())
+      .get(`/api/v1/payments/${createdBody.data.id}`)
+      .expect(200);
+
+    expect(retrieved.headers['x-ratelimit-limit']).toBe('3');
+    expect(
+      retrieved.headers['x-ratelimit-limit-payment-create'],
+    ).toBeUndefined();
   });
 
   it('documents payment creation rate limits and the standard 429 schema', async () => {
@@ -185,6 +232,9 @@ describe('Rate limiting (e2e)', () => {
     expect(throttledHeaders).toBeDefined();
     for (const header of [
       'x-request-id',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
       'Retry-After',
       'Retry-After-payment-create',
     ]) {
