@@ -8,12 +8,12 @@ account bindings, credentials, and private key details are intentionally omitted
 ## Tools used
 
 - OpenAI Codex assisted with requirement analysis, architecture, implementation,
-  tests, documentation, refactoring, Git checkpoints, and verification.
-- Claude Code 2.1.247 was downloaded to Bun's temporary tool cache for the
-  requested independent review. The repository was not sent to Anthropic because
-  external transfer of the private source requires explicit user consent. The
-  review prompt is recorded below and the review status must be updated before
-  submission if that consent is granted.
+  tests, documentation, refactoring, Git checkpoints, code review, security/QA
+  review, and final verification.
+- Claude Code 2.1.247 was briefly downloaded to Bun's temporary tool cache while
+  interpreting the original review wording. It did not receive repository source
+  or perform the review. The user subsequently clarified that the intended tool
+  was Codex, so no Anthropic review is part of this submission.
 
 No AI output was accepted as sufficient evidence on its own. Changes were
 reviewed against the assessment, exercised through automated tests, and checked
@@ -185,14 +185,17 @@ the resulting decisions.
 The final submission prompt required completion within 48 hours by Thursday at
 5:00 PM Nigerian time, inclusion of the completed assessment and every AI
 prompt/script used, thorough testing, production-ready quality, freedom from
-critical bugs, and careful Claude Code review and validation of AI-generated
-output.
+critical bugs, and careful review and validation of AI-generated output. Its
+initial reference to Claude Code was followed by the clarification: "Do not mind
+Claude code, its codex".
 
-## Claude Code review prompt
+## Unexecuted Claude Code review prompt
 
 The following read-only prompt was prepared for Claude Code 2.1.247. Execution
-was blocked before repository contents were transferred because explicit consent
-for sending private source code to Anthropic had not been provided:
+was blocked before repository contents were transferred, and the user later
+clarified that Codex—not Claude Code—was the intended reviewer. It is retained
+here solely because all AI prompts and attempted review commands must be
+disclosed:
 
 ```text
 Perform an independent, production-readiness code review of this NestJS 11
@@ -246,6 +249,5 @@ machine-specific paths are tracked.
 Before submission, the reviewer should confirm that:
 
 - this disclosure reflects the final repository state;
-- the Claude Code review status is updated after explicit consent and review;
 - every command in the README passes on the submitted commit; and
 - the remote repository URL points to that same verified commit.
