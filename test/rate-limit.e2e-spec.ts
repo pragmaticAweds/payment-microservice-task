@@ -212,9 +212,9 @@ describe('Rate limiting (e2e)', () => {
   });
 
   it.each([
-    ['/health/live', { data: { status: 'live' } }],
+    ['/api/v1/health/live', { data: { status: 'live' } }],
     [
-      '/health/ready',
+      '/api/v1/health/ready',
       {
         data: {
           status: 'ready',
@@ -241,7 +241,7 @@ describe('Rate limiting (e2e)', () => {
 
   it('documents payment creation rate limits and the standard 429 schema', async () => {
     const response = await request(app!.getHttpServer())
-      .get('/docs-json')
+      .get('/api/v1/docs-json')
       .expect(200);
     const document = response.body as OpenApiDocument;
     const create = document.paths['/api/v1/payments']?.post;

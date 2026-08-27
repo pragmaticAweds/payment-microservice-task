@@ -1,22 +1,14 @@
-import {
-  INestApplication,
-  RequestMethod,
-  VersioningType,
-} from '@nestjs/common';
+import { INestApplication, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
+import { API_PREFIX, API_VERSION } from './api.constants';
 import { configureSwagger } from './openapi/swagger';
 
 export function configureApplication(app: INestApplication): void {
   app.use(helmet());
-  app.setGlobalPrefix('api', {
-    exclude: [
-      { path: 'health/live', method: RequestMethod.GET },
-      { path: 'health/ready', method: RequestMethod.GET },
-    ],
-  });
+  app.setGlobalPrefix(API_PREFIX);
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1',
+    defaultVersion: API_VERSION,
   });
   configureSwagger(app);
   app.enableShutdownHooks();

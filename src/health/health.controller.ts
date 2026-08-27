@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, VERSION_NEUTRAL } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import {
   ApiOkResponse,
   ApiOperation,
@@ -27,7 +27,7 @@ const REQUEST_ID_RESPONSE_HEADERS = {
 } as const;
 
 @ApiTags('Health')
-@Controller({ path: 'health', version: VERSION_NEUTRAL })
+@Controller('health')
 @SkipThrottle({ default: true, 'payment-create': true })
 export class HealthController {
   constructor(

@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { API_BASE_PATH } from '../api.constants';
 
 export function configureSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
@@ -13,8 +14,8 @@ export function configureSwagger(app: INestApplication): void {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('docs', app, document, {
-    jsonDocumentUrl: 'docs-json',
+  SwaggerModule.setup(`${API_BASE_PATH}/docs`, app, document, {
+    jsonDocumentUrl: `${API_BASE_PATH}/docs-json`,
     raw: ['json'],
   });
 }

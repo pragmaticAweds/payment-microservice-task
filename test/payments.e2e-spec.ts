@@ -556,13 +556,15 @@ describe('Payments API (e2e)', () => {
   });
 
   it('serves Swagger UI and a versioned OpenAPI document', async () => {
-    const html = await request(app.getHttpServer()).get('/docs').expect(200);
+    const html = await request(app.getHttpServer())
+      .get('/api/v1/docs')
+      .expect(200);
 
     expect(html.headers['content-type']).toContain('text/html');
     expect(html.text).toContain('Swagger UI');
 
     const response = await request(app.getHttpServer())
-      .get('/docs-json')
+      .get('/api/v1/docs-json')
       .expect(200);
     const document = response.body as OpenApiDocument;
 
@@ -578,7 +580,7 @@ describe('Payments API (e2e)', () => {
 
   it('documents payment schemas, request IDs, and every response code', async () => {
     const response = await request(app.getHttpServer())
-      .get('/docs-json')
+      .get('/api/v1/docs-json')
       .expect(200);
     const document = response.body as OpenApiDocument;
     const create = document.paths['/api/v1/payments']?.post;

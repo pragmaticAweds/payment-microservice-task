@@ -78,18 +78,18 @@ describe('Health probes (e2e)', () => {
     await app.close();
   });
 
-  it('exposes an exact unversioned liveness response', async () => {
+  it('exposes an exact versioned liveness response', async () => {
     const response = await request(app.getHttpServer())
-      .get('/health/live')
+      .get('/api/v1/health/live')
       .expect(200);
 
     expect(response.body).toEqual({ data: { status: 'live' } });
     expect(response.headers['x-request-id']).toBeDefined();
   });
 
-  it('exposes an exact unversioned readiness response', async () => {
+  it('exposes an exact versioned readiness response', async () => {
     const response = await request(app.getHttpServer())
-      .get('/health/ready')
+      .get('/api/v1/health/ready')
       .expect(200);
 
     expect(response.body).toEqual({
@@ -101,8 +101,8 @@ describe('Health probes (e2e)', () => {
     expect(response.headers['x-request-id']).toBeDefined();
   });
 
-  it.each(['/api/v1/health/live', '/api/v1/health/ready'])(
-    'does not expose the health probe through the versioned API at %s',
+  it.each(['/health/live', '/health/ready'])(
+    'does not expose an unversioned health probe at %s',
     async (path) => {
       await request(app.getHttpServer()).get(path).expect(404);
     },
@@ -114,7 +114,7 @@ describe('Health probes (e2e)', () => {
 
     const requestId = 'health-shutdown-request';
     const response = await request(app.getHttpServer())
-      .get('/health/ready')
+      .get('/api/v1/health/ready')
       .set('X-Request-Id', requestId)
       .expect(503);
     const body = response.body as ErrorResponseBody;
@@ -125,7 +125,7 @@ describe('Health probes (e2e)', () => {
       message: 'Service is not ready to accept payment work',
       requestId,
       timestamp: body.timestamp,
-      path: '/health/ready',
+      path: '/api/v1/health/ready',
       details: {
         checks: { repository: 'ready', processor: 'not_ready' },
       },
@@ -144,7 +144,7 @@ describe('Health probes (e2e)', () => {
 
     try {
       const response = await request(app.getHttpServer())
-        .get('/health/ready')
+        .get('/api/v1/health/ready')
         .set('X-Request-Id', requestId)
         .expect(503);
       const body = response.body as ErrorResponseBody;
@@ -155,7 +155,7 @@ describe('Health probes (e2e)', () => {
         message: 'Service is not ready to accept payment work',
         requestId,
         timestamp: body.timestamp,
-        path: '/health/ready',
+        path: '/api/v1/health/ready',
         details: {
           checks: { repository: 'not_ready', processor: 'ready' },
         },
@@ -167,13 +167,13 @@ describe('Health probes (e2e)', () => {
     }
   });
 
-  it('documents only the unversioned health paths and their response DTOs', async () => {
+  it('documents only the versioned health paths and their response DTOs', async () => {
     const response = await request(app.getHttpServer())
-      .get('/docs-json')
+      .get('/api/v1/docs-json')
       .expect(200);
     const document = response.body as OpenApiDocument;
-    const live = document.paths['/health/live']?.get;
-    const ready = document.paths['/health/ready']?.get;
+    const live = document.paths['/api/v1/health/live']?.get;
+    const ready = document.paths['/api/v1/health/ready']?.get;
 
     expect(document.tags).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: 'Health' })]),
@@ -196,7 +196,12 @@ describe('Health probes (e2e)', () => {
     ]) {
       expect(documentedResponse?.headers).toHaveProperty('x-request-id');
     }
-    expect(document.paths).not.toHaveProperty('/api/v1/health/live');
-    expect(document.paths).not.toHaveProperty('/api/v1/health/ready');
+    expect(document.paths).not.toHaveProperty('/health/live');
+    expect(document.paths).not.toHaveProperty('/health/ready');
   });
+
+  it.each(['/docs', '/docs-json'])(
+    'does not expose unversioned documentation at %s',
+    (path) => request(app.getHttpServer()).get(path).expect(404),
+  );
 });
