@@ -1,20 +1,11 @@
 import { PinoLogger } from 'nestjs-pino';
 import { API_BASE_PATH } from '../api.constants';
-
-export interface StartupApplication {
-  listen(port: number): Promise<unknown>;
-  resolve(token: typeof PinoLogger): Promise<PinoLogger>;
-}
-
-export interface StartupLogContext {
-  event: 'service.started';
-  port: number;
-  apiUrl: string;
-}
+import { STARTUP_EVENT, STARTUP_LOG_MESSAGE } from './startup.constants';
+import type { StartupApplication, StartupLogContext } from './startup.types';
 
 export function createStartupLogContext(port: number): StartupLogContext {
   return {
-    event: 'service.started',
+    event: STARTUP_EVENT,
     port,
     apiUrl: `http://localhost:${port}/${API_BASE_PATH}`,
   };
@@ -27,5 +18,5 @@ export async function listenAndLogStartup(
   await app.listen(port);
   const logger = await app.resolve(PinoLogger);
 
-  logger.info(createStartupLogContext(port), 'Payment service listening');
+  logger.info(createStartupLogContext(port), STARTUP_LOG_MESSAGE);
 }

@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-
-export interface ServiceInfo {
-  name: string;
-  status: 'ok';
-}
+import type { ServiceInfo } from './app.types';
 
 @Injectable()
 export class AppService {

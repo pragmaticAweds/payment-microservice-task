@@ -3,7 +3,8 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { successResponse } from './common/api-response/api-response';
 import type { ApiSuccessResponse } from './common/api-response/api-response.types';
 import { AppResponseDto } from './app-response.dto';
-import { AppService, type ServiceInfo } from './app.service';
+import { AppService } from './app.service';
+import type { ServiceInfo } from './app.types';
 
 @ApiTags('Application')
 @Controller()
