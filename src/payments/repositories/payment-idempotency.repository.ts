@@ -1,4 +1,4 @@
-import type { Payment } from '../domain/payment';
+import type { Payment } from '../domain/payment/payment';
 
 export const PAYMENT_IDEMPOTENCY_REPOSITORY = Symbol(
   'PAYMENT_IDEMPOTENCY_REPOSITORY',

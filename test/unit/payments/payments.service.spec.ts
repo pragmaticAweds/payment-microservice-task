@@ -1,19 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentsService } from '../../../src/payments/application/payments.service';
-import { Payment } from '../../../src/payments/domain/payment';
+import { Payment } from '../../../src/payments/domain/payment/payment';
 import {
-  PaymentCurrency,
-  PaymentStatus,
-} from '../../../src/payments/domain/payment-status';
-import { InvalidPaymentTransitionError } from '../../../src/payments/domain/payment.errors';
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../../src/payments/domain/payment/payment.constants';
+import { InvalidPaymentTransitionError } from '../../../src/payments/domain/payment/payment.errors';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
 import { PaymentRepository } from '../../../src/payments/repositories/payment.repository';
 
 describe('PaymentsService', () => {
   const input = {
     smallestUnitAmount: 1050,
-    currency: PaymentCurrency.USD,
+    currency: PAYMENT_CURRENCY.USD,
     merchantReference: 'order-2026-0001',
     description: 'Invoice 0001',
   };
@@ -46,10 +46,10 @@ describe('PaymentsService', () => {
 
     expect(payment).toMatchObject({
       smallestUnitAmount: 1050,
-      currency: PaymentCurrency.USD,
+      currency: PAYMENT_CURRENCY.USD,
       merchantReference: 'order-2026-0001',
       description: 'Invoice 0001',
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
     });
     expect(repositoryCreate).toHaveBeenCalledWith(payment);
   });
@@ -89,7 +89,7 @@ describe('PaymentsService', () => {
 
   it('transitions and persists a new immutable payment snapshot', async () => {
     const pending = Payment.create(input);
-    const processing = pending.transitionTo(PaymentStatus.PROCESSING);
+    const processing = pending.transitionTo(PAYMENT_STATUS.PROCESSING);
     repositoryTransition.mockResolvedValue({
       previous: pending,
       current: processing,
@@ -97,34 +97,34 @@ describe('PaymentsService', () => {
 
     const result = await service.transition(
       pending.id,
-      PaymentStatus.PROCESSING,
+      PAYMENT_STATUS.PROCESSING,
     );
 
-    expect(pending.status).toBe(PaymentStatus.PENDING);
+    expect(pending.status).toBe(PAYMENT_STATUS.PENDING);
     expect(result).toBe(processing);
-    expect(result.status).toBe(PaymentStatus.PROCESSING);
+    expect(result.status).toBe(PAYMENT_STATUS.PROCESSING);
     expect(repositoryTransition).toHaveBeenCalledWith(
       pending.id,
-      PaymentStatus.PROCESSING,
+      PAYMENT_STATUS.PROCESSING,
     );
   });
 
   it('logs a structured status-transition event', async () => {
     const pending = Payment.create(input);
-    const processing = pending.transitionTo(PaymentStatus.PROCESSING);
+    const processing = pending.transitionTo(PAYMENT_STATUS.PROCESSING);
     repositoryTransition.mockResolvedValue({
       previous: pending,
       current: processing,
     });
 
-    await service.transition(pending.id, PaymentStatus.PROCESSING);
+    await service.transition(pending.id, PAYMENT_STATUS.PROCESSING);
 
     expect(loggerInfo).toHaveBeenCalledWith(
       {
         event: 'payment.status_transitioned',
         paymentId: pending.id,
-        fromStatus: PaymentStatus.PENDING,
-        toStatus: PaymentStatus.PROCESSING,
+        fromStatus: PAYMENT_STATUS.PENDING,
+        toStatus: PAYMENT_STATUS.PROCESSING,
       },
       'Payment status transitioned',
     );
@@ -135,7 +135,7 @@ describe('PaymentsService', () => {
     repositoryTransition.mockResolvedValue(null);
 
     await expect(
-      service.transition(id, PaymentStatus.PROCESSING),
+      service.transition(id, PAYMENT_STATUS.PROCESSING),
     ).rejects.toEqual(
       expect.objectContaining({
         name: 'PaymentNotFoundError',
@@ -150,13 +150,13 @@ describe('PaymentsService', () => {
     const pending = Payment.create(input);
     repositoryTransition.mockRejectedValue(
       new InvalidPaymentTransitionError(
-        PaymentStatus.PENDING,
-        PaymentStatus.SUCCEEDED,
+        PAYMENT_STATUS.PENDING,
+        PAYMENT_STATUS.SUCCEEDED,
       ),
     );
 
     await expect(
-      service.transition(pending.id, PaymentStatus.SUCCEEDED),
+      service.transition(pending.id, PAYMENT_STATUS.SUCCEEDED),
     ).rejects.toBeInstanceOf(InvalidPaymentTransitionError);
     expect(repositoryCreate).not.toHaveBeenCalled();
   });
@@ -165,13 +165,13 @@ describe('PaymentsService', () => {
     const pending = Payment.create(input);
     repositoryTransition.mockRejectedValue(
       new InvalidPaymentTransitionError(
-        PaymentStatus.PENDING,
-        PaymentStatus.SUCCEEDED,
+        PAYMENT_STATUS.PENDING,
+        PAYMENT_STATUS.SUCCEEDED,
       ),
     );
 
     await expect(
-      service.transition(pending.id, PaymentStatus.SUCCEEDED),
+      service.transition(pending.id, PAYMENT_STATUS.SUCCEEDED),
     ).rejects.toBeInstanceOf(InvalidPaymentTransitionError);
     expect(loggerInfo).not.toHaveBeenCalled();
   });
@@ -180,11 +180,11 @@ describe('PaymentsService', () => {
     const realRepository = new InMemoryPaymentRepository();
     const realService = new PaymentsService(realRepository, logger);
     const pending = await realService.create(input);
-    await realService.transition(pending.id, PaymentStatus.PROCESSING);
+    await realService.transition(pending.id, PAYMENT_STATUS.PROCESSING);
 
     const results = await Promise.allSettled([
-      realService.transition(pending.id, PaymentStatus.SUCCEEDED),
-      realService.transition(pending.id, PaymentStatus.FAILED),
+      realService.transition(pending.id, PAYMENT_STATUS.SUCCEEDED),
+      realService.transition(pending.id, PAYMENT_STATUS.FAILED),
     ]);
     const fulfilled = results.filter(
       (result): result is PromiseFulfilledResult<Payment> =>
@@ -205,9 +205,9 @@ describe('PaymentsService', () => {
     await expect(
       realService.transition(
         pending.id,
-        winningStatus === PaymentStatus.SUCCEEDED
-          ? PaymentStatus.FAILED
-          : PaymentStatus.SUCCEEDED,
+        winningStatus === PAYMENT_STATUS.SUCCEEDED
+          ? PAYMENT_STATUS.FAILED
+          : PAYMENT_STATUS.SUCCEEDED,
       ),
     ).rejects.toBeInstanceOf(InvalidPaymentTransitionError);
     await expect(realService.findById(pending.id)).resolves.toMatchObject({

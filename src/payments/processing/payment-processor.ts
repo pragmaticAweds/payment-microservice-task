@@ -8,8 +8,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentsService } from '../application/payments.service';
-import type { Payment } from '../domain/payment';
-import { PaymentStatus } from '../domain/payment-status';
+import type { Payment } from '../domain/payment/payment';
+import { PAYMENT_STATUS } from '../domain/payment/payment.constants';
 import {
   PAYMENT_OUTCOME_RESOLVER,
   type PaymentOutcomeResolver,
@@ -187,18 +187,18 @@ export class PaymentProcessor
   private async startProcessing(context: ProcessingContext): Promise<void> {
     let current = await this.payments.findById(context.paymentId);
     if (
-      current.status === PaymentStatus.SUCCEEDED ||
-      current.status === PaymentStatus.FAILED
+      current.status === PAYMENT_STATUS.SUCCEEDED ||
+      current.status === PAYMENT_STATUS.FAILED
     ) {
       return;
     }
-    if (current.status === PaymentStatus.PENDING) {
+    if (current.status === PAYMENT_STATUS.PENDING) {
       current = await this.payments.transition(
         context.paymentId,
-        PaymentStatus.PROCESSING,
+        PAYMENT_STATUS.PROCESSING,
       );
     }
-    if (current.status !== PaymentStatus.PROCESSING) {
+    if (current.status !== PAYMENT_STATUS.PROCESSING) {
       return;
     }
 
@@ -217,7 +217,7 @@ export class PaymentProcessor
 
   private async completeProcessing(context: ProcessingContext): Promise<void> {
     const current = await this.payments.findById(context.paymentId);
-    if (current.status !== PaymentStatus.PROCESSING) {
+    if (current.status !== PAYMENT_STATUS.PROCESSING) {
       return;
     }
 
@@ -277,14 +277,14 @@ export class PaymentProcessor
     paymentId: string,
   ): Promise<void> {
     let current = await this.payments.findById(paymentId);
-    if (current.status === PaymentStatus.PENDING) {
+    if (current.status === PAYMENT_STATUS.PENDING) {
       current = await this.payments.transition(
         paymentId,
-        PaymentStatus.PROCESSING,
+        PAYMENT_STATUS.PROCESSING,
       );
     }
-    if (current.status === PaymentStatus.PROCESSING) {
-      await this.payments.transition(paymentId, PaymentStatus.FAILED);
+    if (current.status === PAYMENT_STATUS.PROCESSING) {
+      await this.payments.transition(paymentId, PAYMENT_STATUS.FAILED);
     }
   }
 

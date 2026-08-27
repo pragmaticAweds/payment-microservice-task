@@ -1,4 +1,4 @@
-import { PaymentStatus } from './payment-status';
+import type { PaymentStatus } from './payment.types';
 
 export class InvalidPaymentError extends Error {
   readonly code = 'INVALID_PAYMENT';

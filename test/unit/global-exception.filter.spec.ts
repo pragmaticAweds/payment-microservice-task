@@ -8,8 +8,8 @@ import type { Request, Response } from 'express';
 import type { PinoLogger } from 'nestjs-pino';
 import { GlobalExceptionFilter } from '../../src/common/filters/global-exception.filter';
 import { PaymentNotFoundError } from '../../src/payments/application/payment-not-found.error';
-import { InvalidPaymentTransitionError } from '../../src/payments/domain/payment.errors';
-import { PaymentStatus } from '../../src/payments/domain/payment-status';
+import { InvalidPaymentTransitionError } from '../../src/payments/domain/payment/payment.errors';
+import { PAYMENT_STATUS } from '../../src/payments/domain/payment/payment.constants';
 
 interface ErrorEnvelope {
   status: 'error';
@@ -159,8 +159,8 @@ describe('GlobalExceptionFilter', () => {
 
     filter.catch(
       new InvalidPaymentTransitionError(
-        PaymentStatus.PENDING,
-        PaymentStatus.SUCCEEDED,
+        PAYMENT_STATUS.PENDING,
+        PAYMENT_STATUS.SUCCEEDED,
       ),
       host,
     );

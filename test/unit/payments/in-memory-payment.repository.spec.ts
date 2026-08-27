@@ -1,14 +1,14 @@
-import { Payment } from '../../../src/payments/domain/payment';
+import { Payment } from '../../../src/payments/domain/payment/payment';
 import {
-  PaymentCurrency,
-  PaymentStatus,
-} from '../../../src/payments/domain/payment-status';
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../../src/payments/domain/payment/payment.constants';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
 
 function createPayment(merchantReference: string): Payment {
   return Payment.create({
     smallestUnitAmount: 1050,
-    currency: PaymentCurrency.USD,
+    currency: PAYMENT_CURRENCY.USD,
     merchantReference,
   });
 }
@@ -34,12 +34,12 @@ describe('InMemoryPaymentRepository', () => {
 
   it('atomically transitions and replaces the stored snapshot', async () => {
     const pending = createPayment('order-2');
-    const processing = pending.transitionTo(PaymentStatus.PROCESSING);
+    const processing = pending.transitionTo(PAYMENT_STATUS.PROCESSING);
     await repository.create(pending);
 
     const transition = await repository.transition(
       pending.id,
-      PaymentStatus.PROCESSING,
+      PAYMENT_STATUS.PROCESSING,
     );
 
     expect(transition).toEqual({ previous: pending, current: processing });
@@ -48,7 +48,7 @@ describe('InMemoryPaymentRepository', () => {
 
   it('returns null when transitioning an unknown payment ID', async () => {
     await expect(
-      repository.transition('unknown-id', PaymentStatus.PROCESSING),
+      repository.transition('unknown-id', PAYMENT_STATUS.PROCESSING),
     ).resolves.toBeNull();
   });
 

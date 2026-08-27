@@ -7,7 +7,7 @@ import { PaymentNotFoundError } from '../../payments/application/payment-not-fou
 import {
   InvalidPaymentError,
   InvalidPaymentTransitionError,
-} from '../../payments/domain/payment.errors';
+} from '../../payments/domain/payment/payment.errors';
 import type { MappedApplicationError } from './error.types';
 
 export function mapApplicationError(

@@ -1,9 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { DeterministicPaymentOutcomeResolver } from '../../../src/payments/processing/deterministic-payment-outcome.resolver';
 import {
-  PaymentCurrency,
-  PaymentStatus,
-} from '../../../src/payments/domain/payment-status';
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../../src/payments/domain/payment/payment.constants';
 
 function resolverWithRate(rate: number): DeterministicPaymentOutcomeResolver {
   return new DeterministicPaymentOutcomeResolver(
@@ -14,7 +14,7 @@ function resolverWithRate(rate: number): DeterministicPaymentOutcomeResolver {
 describe('DeterministicPaymentOutcomeResolver', () => {
   const baseInput = {
     smallestUnitAmount: 1050,
-    currency: PaymentCurrency.USD,
+    currency: PAYMENT_CURRENCY.USD,
   };
 
   it('succeeds when the hand-checked score is below the threshold', () => {
@@ -23,7 +23,7 @@ describe('DeterministicPaymentOutcomeResolver', () => {
         ...baseInput,
         idempotencyKey: 'success-key',
       }),
-    ).toBe(PaymentStatus.SUCCEEDED);
+    ).toBe(PAYMENT_STATUS.SUCCEEDED);
   });
 
   it('fails when the hand-checked score is at or above the threshold', () => {
@@ -32,7 +32,7 @@ describe('DeterministicPaymentOutcomeResolver', () => {
         ...baseInput,
         idempotencyKey: 'failure-key',
       }),
-    ).toBe(PaymentStatus.FAILED);
+    ).toBe(PAYMENT_STATUS.FAILED);
   });
 
   it('returns the same outcome for repeated identical input', () => {
@@ -40,17 +40,17 @@ describe('DeterministicPaymentOutcomeResolver', () => {
     const input = {
       idempotencyKey: 'stable-key',
       smallestUnitAmount: 2500,
-      currency: PaymentCurrency.USD,
+      currency: PAYMENT_CURRENCY.USD,
     };
 
-    expect(resolver.resolve(input)).toBe(PaymentStatus.FAILED);
-    expect(resolver.resolve(input)).toBe(PaymentStatus.FAILED);
+    expect(resolver.resolve(input)).toBe(PAYMENT_STATUS.FAILED);
+    expect(resolver.resolve(input)).toBe(PAYMENT_STATUS.FAILED);
   });
 
   it('always fails at zero and always succeeds at one', () => {
     const input = { ...baseInput, idempotencyKey: 'any-key' };
 
-    expect(resolverWithRate(0).resolve(input)).toBe(PaymentStatus.FAILED);
-    expect(resolverWithRate(1).resolve(input)).toBe(PaymentStatus.SUCCEEDED);
+    expect(resolverWithRate(0).resolve(input)).toBe(PAYMENT_STATUS.FAILED);
+    expect(resolverWithRate(1).resolve(input)).toBe(PAYMENT_STATUS.SUCCEEDED);
   });
 });

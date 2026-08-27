@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { CreatePaymentInput, Payment } from '../domain/payment';
-import { PaymentStatus } from '../domain/payment-status';
+import { Payment } from '../domain/payment/payment';
+import type {
+  CreatePaymentInput,
+  PaymentStatus,
+} from '../domain/payment/payment.types';
 import { PAYMENT_REPOSITORY } from '../repositories/payment.repository';
 import type { PaymentRepository } from '../repositories/payment.repository';
 import { PaymentNotFoundError } from './payment-not-found.error';

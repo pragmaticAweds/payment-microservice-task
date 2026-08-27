@@ -3,35 +3,19 @@ import {
   InvalidPaymentError,
   InvalidPaymentTransitionError,
 } from './payment.errors';
-import { PaymentCurrency, PaymentStatus } from './payment-status';
-
-const MAX_MERCHANT_REFERENCE_LENGTH = 100;
-const MAX_DESCRIPTION_LENGTH = 500;
-
-const ALLOWED_TRANSITIONS: Record<PaymentStatus, readonly PaymentStatus[]> = {
-  [PaymentStatus.PENDING]: [PaymentStatus.PROCESSING],
-  [PaymentStatus.PROCESSING]: [PaymentStatus.SUCCEEDED, PaymentStatus.FAILED],
-  [PaymentStatus.SUCCEEDED]: [],
-  [PaymentStatus.FAILED]: [],
-};
-
-export interface CreatePaymentInput {
-  smallestUnitAmount: number;
-  currency: PaymentCurrency;
-  merchantReference: string;
-  description?: string;
-}
-
-interface PaymentProperties {
-  id: string;
-  smallestUnitAmount: number;
-  currency: PaymentCurrency;
-  merchantReference: string;
-  description?: string;
-  status: PaymentStatus;
-  createdAt: string;
-  updatedAt: string;
-}
+import {
+  ALLOWED_PAYMENT_TRANSITIONS,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_MERCHANT_REFERENCE_LENGTH,
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from './payment.constants';
+import type {
+  CreatePaymentInput,
+  PaymentCurrency,
+  PaymentProperties,
+  PaymentStatus,
+} from './payment.types';
 
 function normalizeMerchantReference(merchantReference: string): string {
   const normalized = merchantReference.trim();
@@ -97,7 +81,7 @@ export class Payment {
       );
     }
 
-    if (input.currency !== PaymentCurrency.USD) {
+    if (input.currency !== PAYMENT_CURRENCY.USD) {
       throw new InvalidPaymentError('currency must be USD');
     }
 
@@ -106,17 +90,17 @@ export class Payment {
     return new Payment({
       id: randomUUID(),
       smallestUnitAmount: input.smallestUnitAmount,
-      currency: PaymentCurrency.USD,
+      currency: PAYMENT_CURRENCY.USD,
       merchantReference: normalizeMerchantReference(input.merchantReference),
       description: normalizeDescription(input.description),
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
   }
 
   transitionTo(nextStatus: PaymentStatus): Payment {
-    if (!ALLOWED_TRANSITIONS[this.status].includes(nextStatus)) {
+    if (!ALLOWED_PAYMENT_TRANSITIONS[this.status].includes(nextStatus)) {
       throw new InvalidPaymentTransitionError(this.status, nextStatus);
     }
 

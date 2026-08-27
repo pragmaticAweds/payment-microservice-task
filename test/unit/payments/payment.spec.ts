@@ -1,21 +1,22 @@
 import {
   InvalidPaymentError,
   InvalidPaymentTransitionError,
-} from '../../../src/payments/domain/payment.errors';
+} from '../../../src/payments/domain/payment/payment.errors';
+import { Payment } from '../../../src/payments/domain/payment/payment';
 import {
-  Payment,
-  type CreatePaymentInput,
-} from '../../../src/payments/domain/payment';
-import {
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../../src/payments/domain/payment/payment.constants';
+import type {
+  CreatePaymentInput,
   PaymentCurrency,
-  PaymentStatus,
-} from '../../../src/payments/domain/payment-status';
+} from '../../../src/payments/domain/payment/payment.types';
 
 const CURRENT_TIME = new Date('2026-08-26T12:00:00.000Z');
 
 const validInput: CreatePaymentInput = {
   smallestUnitAmount: 1050,
-  currency: PaymentCurrency.USD,
+  currency: PAYMENT_CURRENCY.USD,
   merchantReference: 'order-482',
   description: 'Payment for order 482',
 };
@@ -39,10 +40,10 @@ describe('Payment creation', () => {
 
     expect(payment).toMatchObject({
       smallestUnitAmount: 1050,
-      currency: PaymentCurrency.USD,
+      currency: PAYMENT_CURRENCY.USD,
       merchantReference: 'order-482',
       description: 'Payment for order 482',
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
       createdAt: CURRENT_TIME.toISOString(),
       updatedAt: CURRENT_TIME.toISOString(),
     });
@@ -109,9 +110,9 @@ describe('Payment status transitions', () => {
     const pending = Payment.create(validInput);
     jest.advanceTimersByTime(1000);
 
-    const processing = pending.transitionTo(PaymentStatus.PROCESSING);
+    const processing = pending.transitionTo(PAYMENT_STATUS.PROCESSING);
 
-    expect(pending.status).toBe(PaymentStatus.PENDING);
+    expect(pending.status).toBe(PAYMENT_STATUS.PENDING);
     expect(processing).not.toBe(pending);
     expect(processing).toMatchObject({
       id: pending.id,
@@ -119,62 +120,62 @@ describe('Payment status transitions', () => {
       currency: pending.currency,
       merchantReference: pending.merchantReference,
       description: pending.description,
-      status: PaymentStatus.PROCESSING,
+      status: PAYMENT_STATUS.PROCESSING,
       createdAt: pending.createdAt,
       updatedAt: '2026-08-26T12:00:01.000Z',
     });
     expect(Object.isFrozen(processing)).toBe(true);
   });
 
-  it.each([PaymentStatus.SUCCEEDED, PaymentStatus.FAILED])(
+  it.each([PAYMENT_STATUS.SUCCEEDED, PAYMENT_STATUS.FAILED])(
     'transitions from processing to %s',
     (terminalStatus) => {
       const processing = Payment.create(validInput).transitionTo(
-        PaymentStatus.PROCESSING,
+        PAYMENT_STATUS.PROCESSING,
       );
 
       const terminal = processing.transitionTo(terminalStatus);
 
       expect(terminal.status).toBe(terminalStatus);
-      expect(processing.status).toBe(PaymentStatus.PROCESSING);
+      expect(processing.status).toBe(PAYMENT_STATUS.PROCESSING);
     },
   );
 
   it.each([
-    PaymentStatus.PENDING,
-    PaymentStatus.SUCCEEDED,
-    PaymentStatus.FAILED,
+    PAYMENT_STATUS.PENDING,
+    PAYMENT_STATUS.SUCCEEDED,
+    PAYMENT_STATUS.FAILED,
   ])('rejects pending to %s', (nextStatus) => {
     const pending = Payment.create(validInput);
 
     expect(() => pending.transitionTo(nextStatus)).toThrow(
       InvalidPaymentTransitionError,
     );
-    expect(pending.status).toBe(PaymentStatus.PENDING);
+    expect(pending.status).toBe(PAYMENT_STATUS.PENDING);
   });
 
-  it.each([PaymentStatus.PENDING, PaymentStatus.PROCESSING])(
+  it.each([PAYMENT_STATUS.PENDING, PAYMENT_STATUS.PROCESSING])(
     'rejects processing to %s',
     (nextStatus) => {
       const processing = Payment.create(validInput).transitionTo(
-        PaymentStatus.PROCESSING,
+        PAYMENT_STATUS.PROCESSING,
       );
 
       expect(() => processing.transitionTo(nextStatus)).toThrow(
         InvalidPaymentTransitionError,
       );
-      expect(processing.status).toBe(PaymentStatus.PROCESSING);
+      expect(processing.status).toBe(PAYMENT_STATUS.PROCESSING);
     },
   );
 
-  it.each([PaymentStatus.SUCCEEDED, PaymentStatus.FAILED])(
+  it.each([PAYMENT_STATUS.SUCCEEDED, PAYMENT_STATUS.FAILED])(
     'rejects every transition from terminal status %s',
     (terminalStatus) => {
       const terminal = Payment.create(validInput)
-        .transitionTo(PaymentStatus.PROCESSING)
+        .transitionTo(PAYMENT_STATUS.PROCESSING)
         .transitionTo(terminalStatus);
 
-      for (const nextStatus of Object.values(PaymentStatus)) {
+      for (const nextStatus of Object.values(PAYMENT_STATUS)) {
         expect(() => terminal.transitionTo(nextStatus)).toThrow(
           InvalidPaymentTransitionError,
         );
@@ -187,14 +188,14 @@ describe('Payment status transitions', () => {
     const pending = Payment.create(validInput);
 
     try {
-      pending.transitionTo(PaymentStatus.SUCCEEDED);
+      pending.transitionTo(PAYMENT_STATUS.SUCCEEDED);
       throw new Error('Expected transition to be rejected');
     } catch (error) {
       expect(error).toBeInstanceOf(InvalidPaymentTransitionError);
       expect(error).toMatchObject({
         code: 'INVALID_PAYMENT_TRANSITION',
-        from: PaymentStatus.PENDING,
-        to: PaymentStatus.SUCCEEDED,
+        from: PAYMENT_STATUS.PENDING,
+        to: PAYMENT_STATUS.SUCCEEDED,
       });
     }
   });

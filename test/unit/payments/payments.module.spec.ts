@@ -2,8 +2,8 @@ import { TestingModule, Test } from '@nestjs/testing';
 import { CommonModule } from '../../../src/common/common.module';
 import { RuntimeConfigModule } from '../../../src/config/runtime-config.module';
 import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
-import { Payment } from '../../../src/payments/domain/payment';
-import { PaymentCurrency } from '../../../src/payments/domain/payment-status';
+import { Payment } from '../../../src/payments/domain/payment/payment';
+import { PAYMENT_CURRENCY } from '../../../src/payments/domain/payment/payment.constants';
 import { PaymentsModule } from '../../../src/payments/payments.module';
 import { DeterministicPaymentOutcomeResolver } from '../../../src/payments/processing/deterministic-payment-outcome.resolver';
 import { PAYMENT_OUTCOME_RESOLVER } from '../../../src/payments/processing/payment-outcome-resolver';
@@ -34,7 +34,7 @@ describe('PaymentsModule', () => {
     const repository = moduleRef.get<PaymentRepository>(PAYMENT_REPOSITORY);
     const payment = Payment.create({
       smallestUnitAmount: 2500,
-      currency: PaymentCurrency.USD,
+      currency: PAYMENT_CURRENCY.USD,
       merchantReference: 'module-wiring-check',
     });
 

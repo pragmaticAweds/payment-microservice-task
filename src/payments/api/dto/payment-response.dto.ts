@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaymentCurrency, PaymentStatus } from '../../domain/payment-status';
+import {
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../domain/payment/payment.constants';
+import type {
+  PaymentCurrency,
+  PaymentStatus,
+} from '../../domain/payment/payment.types';
 
 export class PaymentResponseDto {
   @ApiProperty({
@@ -19,8 +26,8 @@ export class PaymentResponseDto {
   smallestUnitAmount!: number;
 
   @ApiProperty({
-    enum: [PaymentCurrency.USD],
-    example: PaymentCurrency.USD,
+    enum: [PAYMENT_CURRENCY.USD],
+    example: PAYMENT_CURRENCY.USD,
   })
   currency!: PaymentCurrency;
 
@@ -38,8 +45,8 @@ export class PaymentResponseDto {
   description?: string;
 
   @ApiProperty({
-    enum: PaymentStatus,
-    example: PaymentStatus.PENDING,
+    enum: Object.values(PAYMENT_STATUS),
+    example: PAYMENT_STATUS.PENDING,
   })
   status!: PaymentStatus;
 

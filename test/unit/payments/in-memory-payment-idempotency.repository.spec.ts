@@ -1,12 +1,12 @@
-import { Payment } from '../../../src/payments/domain/payment';
-import { PaymentCurrency } from '../../../src/payments/domain/payment-status';
+import { Payment } from '../../../src/payments/domain/payment/payment';
+import { PAYMENT_CURRENCY } from '../../../src/payments/domain/payment/payment.constants';
 import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';
 import { PaymentIdempotencyRecord } from '../../../src/payments/repositories/payment-idempotency.repository';
 
 describe('InMemoryPaymentIdempotencyRepository', () => {
   const payment = Payment.create({
     smallestUnitAmount: 1050,
-    currency: PaymentCurrency.USD,
+    currency: PAYMENT_CURRENCY.USD,
     merchantReference: 'order-2026-0001',
   });
   const record: PaymentIdempotencyRecord = {

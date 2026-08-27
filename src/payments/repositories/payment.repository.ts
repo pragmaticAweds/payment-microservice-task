@@ -1,5 +1,5 @@
-import { Payment } from '../domain/payment';
-import { PaymentStatus } from '../domain/payment-status';
+import { Payment } from '../domain/payment/payment';
+import type { PaymentStatus } from '../domain/payment/payment.types';
 
 export const PAYMENT_REPOSITORY = Symbol('PAYMENT_REPOSITORY');
 

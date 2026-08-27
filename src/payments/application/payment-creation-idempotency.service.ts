@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import type { CreatePaymentInput, Payment } from '../domain/payment';
+import type { Payment } from '../domain/payment/payment';
+import type { CreatePaymentInput } from '../domain/payment/payment.types';
 import {
   PAYMENT_IDEMPOTENCY_REPOSITORY,
   type PaymentIdempotencyRepository,

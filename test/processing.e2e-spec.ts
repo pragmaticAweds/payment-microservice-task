@@ -5,8 +5,9 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
-import type { Payment } from '../src/payments/domain/payment';
-import { PaymentStatus } from '../src/payments/domain/payment-status';
+import type { Payment } from '../src/payments/domain/payment/payment';
+import { PAYMENT_STATUS } from '../src/payments/domain/payment/payment.constants';
+import type { PaymentStatus } from '../src/payments/domain/payment/payment.types';
 import {
   PROCESSING_SCHEDULER,
   type ProcessingScheduler,
@@ -315,10 +316,10 @@ describe('Asynchronous payment processing (e2e)', () => {
     await flushProcessorWork();
     expect(scheduler.pendingDelays()).toEqual([25]);
 
-    const heldTransition = repository.holdNextTransition(PaymentStatus.FAILED);
+    const heldTransition = repository.holdNextTransition(PAYMENT_STATUS.FAILED);
     const manualResponse = request(testApp.getHttpServer())
       .patch(`/api/v1/payments/${payment.id}/status`)
-      .send({ status: PaymentStatus.FAILED })
+      .send({ status: PAYMENT_STATUS.FAILED })
       .expect(409)
       .then((response) => response);
     await heldTransition.started;

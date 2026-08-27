@@ -11,7 +11,8 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { PaymentCurrency } from '../../domain/payment-status';
+import { PAYMENT_CURRENCY } from '../../domain/payment/payment.constants';
+import type { PaymentCurrency } from '../../domain/payment/payment.types';
 
 function trimString({ value }: TransformFnParams): unknown {
   return typeof value === 'string' ? value.trim() : value;
@@ -32,10 +33,10 @@ export class CreatePaymentDto {
   smallestUnitAmount!: number;
 
   @ApiProperty({
-    enum: [PaymentCurrency.USD],
-    example: PaymentCurrency.USD,
+    enum: [PAYMENT_CURRENCY.USD],
+    example: PAYMENT_CURRENCY.USD,
   })
-  @Equals(PaymentCurrency.USD)
+  @Equals(PAYMENT_CURRENCY.USD)
   currency!: PaymentCurrency;
 
   @ApiProperty({

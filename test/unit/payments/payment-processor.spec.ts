@@ -5,9 +5,9 @@ import { PaymentsController } from '../../../src/payments/api/payments.controlle
 import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
 import { PaymentsService } from '../../../src/payments/application/payments.service';
 import {
-  PaymentCurrency,
-  PaymentStatus,
-} from '../../../src/payments/domain/payment-status';
+  PAYMENT_CURRENCY,
+  PAYMENT_STATUS,
+} from '../../../src/payments/domain/payment/payment.constants';
 import type { PaymentOutcomeResolver } from '../../../src/payments/processing/payment-outcome-resolver';
 import { PaymentProcessor } from '../../../src/payments/processing/payment-processor';
 import { TimeoutProcessingScheduler } from '../../../src/payments/processing/timeout-processing.scheduler';
@@ -156,7 +156,7 @@ class BlockingSaveRepository implements PaymentRepository {
 describe('PaymentProcessor', () => {
   const input = {
     smallestUnitAmount: 1050,
-    currency: PaymentCurrency.USD,
+    currency: PAYMENT_CURRENCY.USD,
     merchantReference: 'processor-order',
   };
   let infoLogs: TestLogMetadata[];
@@ -183,7 +183,7 @@ describe('PaymentProcessor', () => {
 
   function createHarness(options?: {
     delayMs?: number;
-    outcome?: PaymentStatus.SUCCEEDED | PaymentStatus.FAILED;
+    outcome?: typeof PAYMENT_STATUS.SUCCEEDED | typeof PAYMENT_STATUS.FAILED;
     repository?: PaymentRepository;
     resolver?: PaymentOutcomeResolver;
   }): { payments: PaymentsService; processor: PaymentProcessor } {
@@ -192,7 +192,7 @@ describe('PaymentProcessor', () => {
       logger,
     );
     const resolver: PaymentOutcomeResolver = options?.resolver ?? {
-      resolve: () => options?.outcome ?? PaymentStatus.SUCCEEDED,
+      resolve: () => options?.outcome ?? PAYMENT_STATUS.SUCCEEDED,
     };
     const processor = new PaymentProcessor(
       payments,
@@ -223,19 +223,19 @@ describe('PaymentProcessor', () => {
     await schedulePayment(processor, payment, 'processor-key');
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
     });
     await jest.advanceTimersByTimeAsync(0);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PROCESSING,
+      status: PAYMENT_STATUS.PROCESSING,
     });
     await jest.advanceTimersByTimeAsync(49);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PROCESSING,
+      status: PAYMENT_STATUS.PROCESSING,
     });
     await jest.advanceTimersByTimeAsync(1);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.SUCCEEDED,
+      status: PAYMENT_STATUS.SUCCEEDED,
     });
 
     const scheduledLog = infoLogs.find(
@@ -252,7 +252,7 @@ describe('PaymentProcessor', () => {
         expect.objectContaining({
           event: 'payment.processing_completed',
           paymentId: payment.id,
-          outcome: PaymentStatus.SUCCEEDED,
+          outcome: PAYMENT_STATUS.SUCCEEDED,
           durationMs: 50,
         }),
       ]),
@@ -267,17 +267,17 @@ describe('PaymentProcessor', () => {
     await schedulePayment(processor, payment, 'zero-delay-key');
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
     });
     await jest.runAllTimersAsync();
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.SUCCEEDED,
+      status: PAYMENT_STATUS.SUCCEEDED,
     });
   });
 
   it('applies a failed outcome selected by the resolver', async () => {
     const { payments, processor } = createHarness({
-      outcome: PaymentStatus.FAILED,
+      outcome: PAYMENT_STATUS.FAILED,
     });
     const payment = await payments.create(input);
 
@@ -285,7 +285,7 @@ describe('PaymentProcessor', () => {
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.FAILED,
+      status: PAYMENT_STATUS.FAILED,
     });
   });
 
@@ -302,7 +302,7 @@ describe('PaymentProcessor', () => {
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.FAILED,
+      status: PAYMENT_STATUS.FAILED,
     });
     const failureLog = errorLogs.find(
       (metadata) => metadata.event === 'payment.processing_failed',
@@ -324,7 +324,7 @@ describe('PaymentProcessor', () => {
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.FAILED,
+      status: PAYMENT_STATUS.FAILED,
     });
     expect(errorLogs).toEqual(
       expect.arrayContaining([
@@ -339,23 +339,23 @@ describe('PaymentProcessor', () => {
   it('continues from processing when another caller already made that transition', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
-    await payments.transition(payment.id, PaymentStatus.PROCESSING);
+    await payments.transition(payment.id, PAYMENT_STATUS.PROCESSING);
 
     await schedulePayment(processor, payment, 'already-processing-key');
     await jest.runAllTimersAsync();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.SUCCEEDED,
+      status: PAYMENT_STATUS.SUCCEEDED,
     });
   });
 
   it('stops without another transition when the payment is already terminal', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);
-    await payments.transition(payment.id, PaymentStatus.PROCESSING);
+    await payments.transition(payment.id, PAYMENT_STATUS.PROCESSING);
     const succeeded = await payments.transition(
       payment.id,
-      PaymentStatus.SUCCEEDED,
+      PAYMENT_STATUS.SUCCEEDED,
     );
 
     await schedulePayment(processor, payment, 'already-terminal-key');
@@ -405,7 +405,7 @@ describe('PaymentProcessor', () => {
     ).resolves.toBeUndefined();
     await jest.runAllTimersAsync();
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.SUCCEEDED,
+      status: PAYMENT_STATUS.SUCCEEDED,
     });
   });
 
@@ -455,11 +455,11 @@ describe('PaymentProcessor', () => {
       sharedShutdownPromise: true,
     });
     expect(creationOutcome).toMatchObject({
-      result: { data: { status: PaymentStatus.PENDING } },
+      result: { data: { status: PAYMENT_STATUS.PENDING } },
     });
     expect(idempotencyRecord).toMatchObject({
       key,
-      response: { status: PaymentStatus.PENDING },
+      response: { status: PAYMENT_STATUS.PENDING },
     });
   });
 
@@ -497,7 +497,7 @@ describe('PaymentProcessor', () => {
 
     expect(settledBeforeRelease).toBe(false);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.FAILED,
+      status: PAYMENT_STATUS.FAILED,
     });
   });
 
@@ -507,13 +507,13 @@ describe('PaymentProcessor', () => {
     await schedulePayment(processor, payment, 'queued-completion-key');
     await jest.advanceTimersByTimeAsync(0);
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PROCESSING,
+      status: PAYMENT_STATUS.PROCESSING,
     });
 
     await processor.onApplicationShutdown();
 
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.FAILED,
+      status: PAYMENT_STATUS.FAILED,
     });
   });
 
@@ -554,7 +554,7 @@ describe('PaymentProcessor', () => {
     );
     await jest.runAllTimersAsync();
     await expect(payments.findById(payment.id)).resolves.toMatchObject({
-      status: PaymentStatus.PENDING,
+      status: PAYMENT_STATUS.PENDING,
     });
   });
 });

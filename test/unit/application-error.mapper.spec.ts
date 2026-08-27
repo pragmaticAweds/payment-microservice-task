@@ -8,8 +8,8 @@ import { PaymentNotFoundError } from '../../src/payments/application/payment-not
 import {
   InvalidPaymentError,
   InvalidPaymentTransitionError,
-} from '../../src/payments/domain/payment.errors';
-import { PaymentStatus } from '../../src/payments/domain/payment-status';
+} from '../../src/payments/domain/payment/payment.errors';
+import { PAYMENT_STATUS } from '../../src/payments/domain/payment/payment.constants';
 
 describe('mapApplicationError', () => {
   it('maps invalid payment input to a safe bad-request error', () => {
@@ -36,8 +36,8 @@ describe('mapApplicationError', () => {
     expect(
       mapApplicationError(
         new InvalidPaymentTransitionError(
-          PaymentStatus.PENDING,
-          PaymentStatus.SUCCEEDED,
+          PAYMENT_STATUS.PENDING,
+          PAYMENT_STATUS.SUCCEEDED,
         ),
       ),
     ).toEqual({
@@ -45,8 +45,8 @@ describe('mapApplicationError', () => {
       code: 'INVALID_PAYMENT_TRANSITION',
       message: 'Payment cannot transition from pending to succeeded',
       details: {
-        from: PaymentStatus.PENDING,
-        to: PaymentStatus.SUCCEEDED,
+        from: PAYMENT_STATUS.PENDING,
+        to: PAYMENT_STATUS.SUCCEEDED,
       },
     });
   });

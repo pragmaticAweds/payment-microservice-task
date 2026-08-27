@@ -28,7 +28,7 @@ import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
 import { PaymentCreationRateLimit } from '../../common/rate-limit/payment-creation-rate-limit.decorator';
 import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
 import { PaymentsService } from '../application/payments.service';
-import type { Payment } from '../domain/payment';
+import type { Payment } from '../domain/payment/payment';
 import { PaymentProcessor } from '../processing/payment-processor';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentDataResponseDto } from './dto/payment-response.dto';

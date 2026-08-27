@@ -1,10 +1,10 @@
-import type { PaymentCurrency } from '../domain/payment-status';
-import { PaymentStatus } from '../domain/payment-status';
+import { PAYMENT_STATUS } from '../domain/payment/payment.constants';
+import type { PaymentCurrency } from '../domain/payment/payment.types';
 
 export const PAYMENT_OUTCOME_RESOLVER = Symbol('PAYMENT_OUTCOME_RESOLVER');
 
 export type TerminalPaymentStatus =
-  PaymentStatus.SUCCEEDED | PaymentStatus.FAILED;
+  typeof PAYMENT_STATUS.SUCCEEDED | typeof PAYMENT_STATUS.FAILED;
 
 export interface PaymentOutcomeInput {
   idempotencyKey: string;

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentStatus } from '../domain/payment-status';
+import { PAYMENT_STATUS } from '../domain/payment/payment.constants';
 import {
   type PaymentOutcomeInput,
   type PaymentOutcomeResolver,
@@ -22,7 +22,7 @@ export class DeterministicPaymentOutcomeResolver implements PaymentOutcomeResolv
     const score = digest.readUInt32BE(0) / 2 ** 32;
 
     return score < this.successRate
-      ? PaymentStatus.SUCCEEDED
-      : PaymentStatus.FAILED;
+      ? PAYMENT_STATUS.SUCCEEDED
+      : PAYMENT_STATUS.FAILED;
   }
 }

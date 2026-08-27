@@ -1,11 +1,11 @@
 import { IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PaymentStatus } from '../../domain/payment-status';
+import { PAYMENT_STATUS } from '../../domain/payment/payment.constants';
 
 export const PAYMENT_TRANSITION_TARGETS = [
-  PaymentStatus.PROCESSING,
-  PaymentStatus.SUCCEEDED,
-  PaymentStatus.FAILED,
+  PAYMENT_STATUS.PROCESSING,
+  PAYMENT_STATUS.SUCCEEDED,
+  PAYMENT_STATUS.FAILED,
 ] as const;
 
 export type PaymentTransitionTarget =
@@ -14,7 +14,7 @@ export type PaymentTransitionTarget =
 export class UpdatePaymentStatusDto {
   @ApiProperty({
     enum: PAYMENT_TRANSITION_TARGETS,
-    example: PaymentStatus.PROCESSING,
+    example: PAYMENT_STATUS.PROCESSING,
   })
   @IsIn(PAYMENT_TRANSITION_TARGETS)
   status!: PaymentTransitionTarget;
