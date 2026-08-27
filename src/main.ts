@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { Logger } from 'nestjs-pino';
+import { Logger, PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { configureApplication } from './app.setup';
+import { createStartupLogContext } from './startup/startup-log';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -10,6 +11,10 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
   configureApplication(app);
-  await app.listen(config.getOrThrow<number>('PORT'));
+  const port = config.getOrThrow<number>('PORT');
+  const pinoLogger = app.get(PinoLogger);
+
+  await app.listen(port);
+  pinoLogger.info(createStartupLogContext(port), 'Payment service listening');
 }
 void bootstrap();
