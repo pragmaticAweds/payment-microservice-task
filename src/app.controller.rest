@@ -1,0 +1,7 @@
+@baseUrl = http://localhost:4040
+
+### Get service information
+# @name getServiceInfo
+# Expected: 200 with status = "success" and data.status = "ok"
+GET {{baseUrl}}/api/v1
+X-Request-Id: rest-app-service-info

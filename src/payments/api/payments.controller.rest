@@ -1,0 +1,105 @@
+@baseUrl = http://localhost:4040
+@idempotencyKey = rest-order-0001
+
+### Create a payment
+# @name createPayment
+# Expected: 201 with status = "success" and data.status = "pending"
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+Idempotency-Key: {{idempotencyKey}}
+X-Request-Id: rest-payment-create
+
+{
+  "smallestUnitAmount": 1050,
+  "currency": "USD",
+  "merchantReference": "rest-order-0001",
+  "description": "Controller REST request"
+}
+
+### Replay the original creation
+# @name replayPaymentCreation
+# Expected: 201 with Idempotency-Replayed: true
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+Idempotency-Key: {{idempotencyKey}}
+X-Request-Id: rest-payment-replay
+
+{
+  "smallestUnitAmount": 1050,
+  "currency": "USD",
+  "merchantReference": "rest-order-0001",
+  "description": "Controller REST request"
+}
+
+### Reject conflicting idempotency-key reuse
+# @name rejectIdempotencyConflict
+# Expected: 409 with status = "error" and code = "IDEMPOTENCY_CONFLICT"
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+Idempotency-Key: {{idempotencyKey}}
+X-Request-Id: rest-payment-conflict
+
+{
+  "smallestUnitAmount": 1051,
+  "currency": "USD",
+  "merchantReference": "rest-order-0001",
+  "description": "Controller REST request"
+}
+
+### Retrieve the created payment
+# @name getPayment
+# Expected: 200 with status = "success"
+GET {{baseUrl}}/api/v1/payments/{{createPayment.response.body.$.data.id}}
+X-Request-Id: rest-payment-get
+
+### Transition the payment to succeeded
+# @name transitionPayment
+# Start with PROCESSING_DELAY_MS=60000 and run createPayment first.
+# Expected: 200 with data.status = "succeeded" when the payment is currently
+# "processing"; otherwise the processor may win with 409.
+PATCH {{baseUrl}}/api/v1/payments/{{createPayment.response.body.$.data.id}}/status
+Content-Type: application/json
+X-Request-Id: rest-payment-transition
+
+{
+  "status": "succeeded"
+}
+
+### Reject creation without an idempotency key
+# @name rejectMissingIdempotencyKey
+# Expected: 400 with status = "error" and code = "INVALID_IDEMPOTENCY_KEY"
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+X-Request-Id: rest-payment-missing-key
+
+{
+  "smallestUnitAmount": 1050,
+  "currency": "USD",
+  "merchantReference": "rest-order-missing-key"
+}
+
+### Reject an invalid payment payload
+# @name rejectInvalidPayment
+# Expected: 400 with status = "error" and validation details
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+Idempotency-Key: rest-invalid-payment-0001
+X-Request-Id: rest-payment-invalid
+
+{
+  "smallestUnitAmount": 10.5,
+  "currency": "EUR",
+  "merchantReference": ""
+}
+
+### Reject a malformed payment UUID
+# @name rejectMalformedPaymentId
+# Expected: 400 with status = "error"
+GET {{baseUrl}}/api/v1/payments/not-a-uuid
+X-Request-Id: rest-payment-malformed-id
+
+### Return not found for an unknown payment UUID
+# @name getUnknownPayment
+# Expected: 404 with status = "error" and code = "PAYMENT_NOT_FOUND"
+GET {{baseUrl}}/api/v1/payments/00000000-0000-4000-8000-000000000000
+X-Request-Id: rest-payment-not-found

@@ -1,0 +1,13 @@
+@baseUrl = http://localhost:4040
+
+### Check process liveness
+# @name getLiveness
+# Expected: 200 with status = "success" and data.status = "live"
+GET {{baseUrl}}/api/v1/health/live
+X-Request-Id: rest-health-live
+
+### Check payment-work readiness
+# @name getReadiness
+# Expected: 200 with status = "success" and data.status = "ready"
+GET {{baseUrl}}/api/v1/health/ready
+X-Request-Id: rest-health-ready

@@ -16,7 +16,7 @@ replace them without changing the HTTP or domain layers.
 - Explicit `pending -> processing -> succeeded | failed` state machine
 - Atomic state transitions in the single-process repository adapter
 - Global and payment-creation rate limits with standard response headers
-- Separate unversioned liveness and readiness probes
+- Separate versioned liveness and readiness probes
 - Structured Pino logging, correlation IDs, and sensitive-field redaction
 - Zod-validated environment configuration and consistent error envelopes
 - Swagger UI plus a machine-readable OpenAPI JSON endpoint
@@ -45,7 +45,7 @@ The main boundaries are:
 - `payments/application`: creation, idempotency, scheduling, and processing.
 - `payments/domain`: framework-independent payment rules and state transitions.
 - `payments/repositories`: interfaces and in-memory adapters.
-- `health`: unversioned process and dependency probes.
+- `health`: versioned process and dependency probes.
 - `openapi`: Swagger configuration.
 
 ## Payment lifecycle
@@ -102,6 +102,10 @@ bun run build
 bun run start:prod
 ```
 
+After the listener binds, the structured startup log emits the
+`service.started` event with the effective port and API URL. With the default
+configuration, the URL is `http://localhost:4040/api/v1`.
+
 ## Configuration
 
 Configuration is validated synchronously at startup. Invalid values stop the
@@ -126,8 +130,8 @@ enforce expiry and shared uniqueness across service instances.
 
 ## API
 
-All API responses use JSON. Payment routes use the global `/api` prefix and URI
-version `v1`; health and documentation routes are intentionally unversioned.
+All API responses use JSON. Every public route uses the global `/api` prefix and
+URI version `v1`, including health and documentation endpoints.
 
 | Method  | Route                         | Purpose                            |
 | ------- | ----------------------------- | ---------------------------------- |
@@ -135,10 +139,36 @@ version `v1`; health and documentation routes are intentionally unversioned.
 | `POST`  | `/api/v1/payments`            | Create and schedule a payment      |
 | `GET`   | `/api/v1/payments/:id`        | Retrieve a payment                 |
 | `PATCH` | `/api/v1/payments/:id/status` | Apply a valid status transition    |
-| `GET`   | `/health/live`                | Process liveness                   |
-| `GET`   | `/health/ready`               | Repository and processor readiness |
-| `GET`   | `/docs`                       | Swagger UI                         |
-| `GET`   | `/docs-json`                  | OpenAPI JSON                       |
+| `GET`   | `/api/v1/health/live`         | Process liveness                   |
+| `GET`   | `/api/v1/health/ready`        | Repository and processor readiness |
+| `GET`   | `/api/v1/docs`                | Swagger UI                         |
+| `GET`   | `/api/v1/docs-json`           | OpenAPI JSON                       |
+
+### Response envelopes
+
+Successful responses place the operation result in `data`. The outer `status`
+describes the HTTP operation, while a nested `data.status` describes the payment
+or health state:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "status": "pending"
+  }
+}
+```
+
+Failures use `status: "error"` and retain the HTTP status, stable error code,
+request ID, timestamp, path, and optional details:
+
+```json
+{
+  "status": "error",
+  "statusCode": 409,
+  "code": "IDEMPOTENCY_CONFLICT"
+}
+```
 
 ### Create a payment
 
@@ -171,6 +201,7 @@ A successful fresh request returns `201 Created`:
 
 ```json
 {
+  "status": "success",
   "data": {
     "id": "4fa85f64-5717-4562-b3fc-2c963f66afa6",
     "smallestUnitAmount": 1050,
@@ -258,21 +289,22 @@ deployment should use shared, atomic storage.
 Liveness confirms that the process is serving requests:
 
 ```bash
-curl http://localhost:4040/health/live
+curl http://localhost:4040/api/v1/health/live
 ```
 
 ```json
-{ "data": { "status": "live" } }
+{ "status": "success", "data": { "status": "live" } }
 ```
 
 Readiness checks both the repository and asynchronous processor:
 
 ```bash
-curl http://localhost:4040/health/ready
+curl http://localhost:4040/api/v1/health/ready
 ```
 
 ```json
 {
+  "status": "success",
   "data": {
     "status": "ready",
     "checks": {
@@ -290,8 +322,8 @@ the service cannot accept payment work, including during shutdown.
 
 With the service running:
 
-- Swagger UI: `http://localhost:4040/docs`
-- OpenAPI JSON: `http://localhost:4040/docs-json`
+- Swagger UI: `http://localhost:4040/api/v1/docs`
+- OpenAPI JSON: `http://localhost:4040/api/v1/docs-json`
 
 The specification documents DTO constraints, examples, the required idempotency
 header, the optional correlation header, response headers, rate limits, and error
@@ -303,6 +335,7 @@ Expected and unexpected failures use one envelope:
 
 ```json
 {
+  "status": "error",
   "statusCode": 409,
   "code": "IDEMPOTENCY_CONFLICT",
   "message": "Idempotency-Key has already been used with a different request",
@@ -330,6 +363,22 @@ request failures.
 Authorization, cookies, idempotency keys, and sensitive body fields are redacted.
 Domain events include stable event names such as `payment.created` and
 `payment.status_transitioned`, identifiers, timing, and safe status context.
+
+The post-bind startup event is `service.started`; it includes the effective
+`port` and versioned `apiUrl` so the terminal shows the exact address to test.
+
+## Controller request files
+
+Runnable HTTP requests are stored beside their controllers:
+
+- [`src/app.controller.rest`](./src/app.controller.rest)
+- [`src/health/health.controller.rest`](./src/health/health.controller.rest)
+- [`src/payments/api/payments.controller.rest`](./src/payments/api/payments.controller.rest)
+
+Use an editor REST client to run individual requests. In the payments file, run
+`createPayment` before requests that read
+`createPayment.response.body.$.data.id`. The replay and conflict examples share
+the same idempotency key intentionally.
 
 ## Quality checks
 
