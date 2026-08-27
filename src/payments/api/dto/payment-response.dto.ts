@@ -57,6 +57,9 @@ export class PaymentResponseDto {
 }
 
 export class PaymentDataResponseDto {
+  @ApiProperty({ enum: ['success'], example: 'success' })
+  status!: 'success';
+
   @ApiProperty({ type: PaymentResponseDto })
   data!: PaymentResponseDto;
 }

@@ -12,6 +12,7 @@ import { InvalidPaymentTransitionError } from '../../src/payments/domain/payment
 import { PaymentStatus } from '../../src/payments/domain/payment-status';
 
 interface ErrorEnvelope {
+  status: 'error';
   statusCode: number;
   code: string;
   message: string;
@@ -57,6 +58,7 @@ function getEnvelope(
   response: jest.Mocked<Pick<Response, 'json' | 'status'>>,
 ): ErrorEnvelope {
   const envelope = response.json.mock.calls[0]?.[0] as ErrorEnvelope;
+  expect(envelope.status).toBe('error');
   expect(Number.isNaN(Date.parse(envelope.timestamp))).toBe(false);
   return envelope;
 }

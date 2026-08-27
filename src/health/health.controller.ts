@@ -7,17 +7,15 @@ import {
 } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import {
+  successResponse,
+  type ApiSuccessResponse,
+} from '../common/http/api-response';
+import {
   HealthLivenessResponseDto,
   HealthNotReadyResponseDto,
   HealthReadinessResponseDto,
 } from './dto/health-response.dto';
-import { HealthService, type HealthReadinessResponse } from './health.service';
-
-interface HealthLivenessResponse {
-  data: {
-    status: 'live';
-  };
-}
+import { HealthService, type HealthReadinessData } from './health.service';
 
 const REQUEST_ID_RESPONSE_HEADERS = {
   'x-request-id': {
@@ -42,8 +40,8 @@ export class HealthController {
     headers: REQUEST_ID_RESPONSE_HEADERS,
     type: HealthLivenessResponseDto,
   })
-  liveness(): HealthLivenessResponse {
-    return { data: { status: 'live' } };
+  liveness(): ApiSuccessResponse<{ status: 'live' }> {
+    return successResponse({ status: 'live' });
   }
 
   @Get('ready')
@@ -58,7 +56,7 @@ export class HealthController {
     headers: REQUEST_ID_RESPONSE_HEADERS,
     type: HealthNotReadyResponseDto,
   })
-  readiness(): Promise<HealthReadinessResponse> {
-    return this.healthService.readiness();
+  async readiness(): Promise<ApiSuccessResponse<HealthReadinessData>> {
+    return successResponse(await this.healthService.readiness());
   }
 }

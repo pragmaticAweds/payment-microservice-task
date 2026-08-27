@@ -19,10 +19,16 @@ describe('AppController (e2e)', () => {
   });
 
   it('GET /api/v1 identifies the running payment microservice', () => {
-    return request(app.getHttpServer()).get('/api/v1').expect(200).expect({
-      name: 'node-payment-microservice',
-      status: 'ok',
-    });
+    return request(app.getHttpServer())
+      .get('/api/v1')
+      .expect(200)
+      .expect({
+        status: 'success',
+        data: {
+          name: 'node-payment-microservice',
+          status: 'ok',
+        },
+      });
   });
 
   it('does not expose application routes outside the API boundary', () => {

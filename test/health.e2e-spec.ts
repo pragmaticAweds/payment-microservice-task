@@ -13,6 +13,7 @@ import {
 } from '../src/payments/repositories/payment.repository';
 
 interface ErrorResponseBody {
+  status: 'error';
   statusCode: number;
   code: string;
   message: string;
@@ -52,6 +53,12 @@ interface OpenApiDocument {
     }
   >;
   tags?: Array<{ name: string }>;
+  components: {
+    schemas: Record<
+      string,
+      { properties?: Record<string, { enum?: string[] }> }
+    >;
+  };
 }
 
 describe('Health probes (e2e)', () => {
@@ -83,7 +90,10 @@ describe('Health probes (e2e)', () => {
       .get('/api/v1/health/live')
       .expect(200);
 
-    expect(response.body).toEqual({ data: { status: 'live' } });
+    expect(response.body).toEqual({
+      status: 'success',
+      data: { status: 'live' },
+    });
     expect(response.headers['x-request-id']).toBeDefined();
   });
 
@@ -93,6 +103,7 @@ describe('Health probes (e2e)', () => {
       .expect(200);
 
     expect(response.body).toEqual({
+      status: 'success',
       data: {
         status: 'ready',
         checks: { repository: 'ready', processor: 'ready' },
@@ -120,6 +131,7 @@ describe('Health probes (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toEqual({
+      status: 'error',
       statusCode: 503,
       code: 'SERVICE_NOT_READY',
       message: 'Service is not ready to accept payment work',
@@ -150,6 +162,7 @@ describe('Health probes (e2e)', () => {
       const body = response.body as ErrorResponseBody;
 
       expect(body).toEqual({
+        status: 'error',
         statusCode: 503,
         code: 'SERVICE_NOT_READY',
         message: 'Service is not ready to accept payment work',
@@ -198,6 +211,18 @@ describe('Health probes (e2e)', () => {
     }
     expect(document.paths).not.toHaveProperty('/health/live');
     expect(document.paths).not.toHaveProperty('/health/ready');
+    expect(
+      document.components.schemas.HealthLivenessResponseDto?.properties?.status
+        ?.enum,
+    ).toEqual(['success']);
+    expect(
+      document.components.schemas.HealthLivenessDataDto?.properties?.status
+        ?.enum,
+    ).toEqual(['live']);
+    expect(
+      document.components.schemas.HealthNotReadyResponseDto?.properties?.status
+        ?.enum,
+    ).toEqual(['error']);
   });
 
   it.each(['/docs', '/docs-json'])(

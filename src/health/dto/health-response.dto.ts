@@ -6,6 +6,9 @@ export class HealthLivenessDataDto {
 }
 
 export class HealthLivenessResponseDto {
+  @ApiProperty({ enum: ['success'], example: 'success' })
+  status!: 'success';
+
   @ApiProperty({ type: HealthLivenessDataDto })
   data!: HealthLivenessDataDto;
 }
@@ -27,6 +30,9 @@ export class HealthReadinessDataDto {
 }
 
 export class HealthReadinessResponseDto {
+  @ApiProperty({ enum: ['success'], example: 'success' })
+  status!: 'success';
+
   @ApiProperty({ type: HealthReadinessDataDto })
   data!: HealthReadinessDataDto;
 }
@@ -37,6 +43,9 @@ export class HealthNotReadyDetailsDto {
 }
 
 export class HealthNotReadyResponseDto {
+  @ApiProperty({ enum: ['error'], example: 'error' })
+  status!: 'error';
+
   @ApiProperty({ example: 503 })
   statusCode!: number;
 
@@ -55,7 +64,7 @@ export class HealthNotReadyResponseDto {
   })
   timestamp!: string;
 
-  @ApiProperty({ example: '/health/ready' })
+  @ApiProperty({ example: '/api/v1/health/ready' })
   path!: string;
 
   @ApiProperty({ type: HealthNotReadyDetailsDto })

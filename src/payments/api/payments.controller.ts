@@ -22,6 +22,10 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import {
+  successResponse,
+  type ApiSuccessResponse,
+} from '../../common/http/api-response';
 import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
 import { PaymentCreationRateLimit } from '../../common/rate-limit/payment-creation-rate-limit.decorator';
 import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
@@ -32,9 +36,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentDataResponseDto } from './dto/payment-response.dto';
 import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 
-interface PaymentDataResponse {
-  data: Payment;
-}
+type PaymentDataResponse = ApiSuccessResponse<Payment>;
 
 const REQUEST_ID_RESPONSE_HEADERS = {
   'x-request-id': {
@@ -167,9 +169,7 @@ export class PaymentsController {
       response.setHeader('Idempotency-Replayed', 'true');
     }
 
-    return {
-      data: result.payment,
-    };
+    return successResponse(result.payment);
   }
 
   @Get(':id')
@@ -203,9 +203,7 @@ export class PaymentsController {
   async findById(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<PaymentDataResponse> {
-    return {
-      data: await this.paymentsService.findById(id),
-    };
+    return successResponse(await this.paymentsService.findById(id));
   }
 
   @Patch(':id/status')
@@ -245,8 +243,8 @@ export class PaymentsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: UpdatePaymentStatusDto,
   ): Promise<PaymentDataResponse> {
-    return {
-      data: await this.paymentsService.transition(id, input.status),
-    };
+    return successResponse(
+      await this.paymentsService.transition(id, input.status),
+    );
   }
 }

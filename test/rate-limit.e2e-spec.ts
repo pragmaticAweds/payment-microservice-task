@@ -13,6 +13,7 @@ import {
 } from '../src/payments/processing/payment-processor';
 
 interface ErrorResponseBody {
+  status: 'error';
   statusCode: number;
   code: string;
   message: string;
@@ -22,6 +23,7 @@ interface ErrorResponseBody {
 }
 
 interface PaymentResponseBody {
+  status: 'success';
   data: {
     id: string;
   };
@@ -112,6 +114,7 @@ describe('Rate limiting (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toEqual({
+      status: 'error',
       statusCode: 429,
       code: 'TOO_MANY_REQUESTS',
       message: 'Rate limit exceeded',
@@ -212,10 +215,11 @@ describe('Rate limiting (e2e)', () => {
   });
 
   it.each([
-    ['/api/v1/health/live', { data: { status: 'live' } }],
+    ['/api/v1/health/live', { status: 'success', data: { status: 'live' } }],
     [
       '/api/v1/health/ready',
       {
+        status: 'success',
         data: {
           status: 'ready',
           checks: { repository: 'ready', processor: 'ready' },

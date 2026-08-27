@@ -17,11 +17,9 @@ export interface HealthReadinessChecks {
   processor: HealthDependencyStatus;
 }
 
-export interface HealthReadinessResponse {
-  data: {
-    status: 'ready';
-    checks: HealthReadinessChecks;
-  };
+export interface HealthReadinessData {
+  status: 'ready';
+  checks: HealthReadinessChecks;
 }
 
 @Injectable()
@@ -34,7 +32,7 @@ export class HealthService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async readiness(): Promise<HealthReadinessResponse> {
+  async readiness(): Promise<HealthReadinessData> {
     const [repository, processor] = await Promise.all([
       this.checkRepository(),
       this.checkProcessor(),
@@ -57,10 +55,8 @@ export class HealthService {
     }
 
     return {
-      data: {
-        status: 'ready',
-        checks,
-      },
+      status: 'ready',
+      checks,
     };
   }
 

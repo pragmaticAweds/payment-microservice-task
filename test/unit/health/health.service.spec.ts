@@ -66,10 +66,8 @@ describe('HealthService', () => {
 
   it('returns ready when both dependencies report ready', async () => {
     await expect(service.readiness()).resolves.toEqual({
-      data: {
-        status: 'ready',
-        checks: { repository: 'ready', processor: 'ready' },
-      },
+      status: 'ready',
+      checks: { repository: 'ready', processor: 'ready' },
     });
     expect(repositoryReady).toHaveBeenCalledTimes(1);
     expect(processorReady).toHaveBeenCalledTimes(1);
@@ -189,7 +187,10 @@ describe('HealthController', () => {
     } satisfies Pick<HealthService, 'readiness'>;
     const controller = new HealthController(healthService);
 
-    expect(controller.liveness()).toEqual({ data: { status: 'live' } });
+    expect(controller.liveness()).toEqual({
+      status: 'success',
+      data: { status: 'live' },
+    });
     expect(healthService.readiness).not.toHaveBeenCalled();
   });
 });

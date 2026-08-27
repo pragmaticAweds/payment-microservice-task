@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ErrorResponseDto {
+  @ApiProperty({ enum: ['error'], example: 'error' })
+  status!: 'error';
+
   @ApiProperty({ example: 400 })
   statusCode!: number;
 

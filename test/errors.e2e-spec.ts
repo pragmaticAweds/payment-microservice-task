@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
 
 interface ErrorResponseBody {
+  status: 'error';
   statusCode: number;
   code: string;
   message: string;
@@ -56,6 +57,7 @@ describe('Global error handling (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toEqual({
+      status: 'error',
       statusCode: 404,
       code: 'NOT_FOUND',
       message: 'Cannot GET /api/v1/does-not-exist',
@@ -73,6 +75,7 @@ describe('Global error handling (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toEqual({
+      status: 'error',
       statusCode: 500,
       code: 'INTERNAL_SERVER_ERROR',
       message: 'An unexpected error occurred',
@@ -92,6 +95,7 @@ describe('Global error handling (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toMatchObject({
+      status: 'error',
       statusCode: 400,
       code: 'VALIDATION_ERROR',
       message: 'Validation failed',

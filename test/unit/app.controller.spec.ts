@@ -10,7 +10,10 @@ describe('AppController', () => {
     const getServiceInfo = jest.fn().mockReturnValue(serviceInfo);
     const controller = new AppController({ getServiceInfo });
 
-    expect(controller.getServiceInfo()).toBe(serviceInfo);
+    expect(controller.getServiceInfo()).toEqual({
+      status: 'success',
+      data: serviceInfo,
+    });
     expect(getServiceInfo).toHaveBeenCalledTimes(1);
   });
 });

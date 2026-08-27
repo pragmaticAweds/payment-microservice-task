@@ -7,9 +7,11 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { API_ERROR_STATUS } from '../http/api-response';
 import { mapApplicationError } from './application-error.mapper';
 
 interface ErrorEnvelope {
+  status: typeof API_ERROR_STATUS;
   statusCode: number;
   code: string;
   message: string;
@@ -144,6 +146,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     const envelope: ErrorEnvelope = {
+      status: API_ERROR_STATUS,
       statusCode,
       ...error,
       requestId,

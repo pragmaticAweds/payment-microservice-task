@@ -155,6 +155,7 @@ interface PaymentResource {
 }
 
 interface PaymentResponseBody {
+  status: 'success';
   data: PaymentResource;
 }
 
@@ -328,6 +329,7 @@ describe('Asynchronous payment processing (e2e)', () => {
     expect(terminalDelay).toBe(25);
     const manual = await manualResponse;
     expect(manual.body).toMatchObject({
+      status: 'error',
       code: 'INVALID_PAYMENT_TRANSITION',
       details: { from: 'succeeded', to: 'failed' },
       statusCode: 409,

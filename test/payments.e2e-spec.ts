@@ -23,10 +23,12 @@ interface PaymentResource {
 }
 
 interface PaymentResponseBody {
+  status: 'success';
   data: PaymentResource;
 }
 
 interface ErrorResponseBody {
+  status: 'error';
   statusCode: number;
   code: string;
   message: string;
@@ -151,6 +153,7 @@ describe('Payments API (e2e)', () => {
     const body = response.body as ErrorResponseBody;
 
     expect(body).toMatchObject({
+      status: 'error',
       statusCode: expected.statusCode,
       code: expected.code,
       requestId: response.headers['x-request-id'],
@@ -194,6 +197,7 @@ describe('Payments API (e2e)', () => {
     expect(typeof createdBody.data.createdAt).toBe('string');
     expect(typeof createdBody.data.updatedAt).toBe('string');
     expect(createdBody).toEqual({
+      status: 'success',
       data: {
         id: createdBody.data.id,
         smallestUnitAmount: 1050,
@@ -668,5 +672,16 @@ describe('Payments API (e2e)', () => {
     );
     expect(document.components.schemas).toHaveProperty('PaymentResponseDto');
     expect(document.components.schemas).toHaveProperty('ErrorResponseDto');
+    expect(
+      document.components.schemas.PaymentDataResponseDto?.properties?.status
+        ?.enum,
+    ).toEqual(['success']);
+    expect(
+      document.components.schemas.PaymentResponseDto?.properties?.status?.enum,
+    ).toEqual(['pending', 'processing', 'succeeded', 'failed']);
+    expect(
+      document.components.schemas.ErrorResponseDto?.properties?.status?.enum,
+    ).toEqual(['error']);
+    expect(document.components.schemas).toHaveProperty('AppResponseDto');
   });
 });
