@@ -42,8 +42,9 @@ The main boundaries are:
 - `common`: cross-cutting errors, filters, logging, and request metadata.
 - `config`: Zod environment validation and typed runtime configuration.
 - `payments/api`: versioned controllers and DTOs.
-- `payments/application`: creation, idempotency, scheduling, and processing.
+- `payments/application`: payment use cases and idempotency coordination.
 - `payments/domain`: framework-independent payment rules and state transitions.
+- `payments/processing`: asynchronous scheduling and deterministic outcomes.
 - `payments/repositories`: interfaces and in-memory adapters.
 - `health`: versioned process and dependency probes.
 - `openapi`: Swagger configuration.
@@ -81,6 +82,42 @@ another in this single-process implementation.
 ├── package.json
 └── bun.lock
 ```
+
+### Source organization
+
+Production definitions are grouped by the concern they describe. Behavior,
+static values, and TypeScript-only shapes use matching filenames inside the
+same concern-owned parent:
+
+```text
+common/api-response/
+├── api-response.ts
+├── api-response.constants.ts
+└── api-response.types.ts
+
+payments/domain/payment/
+├── payment.ts
+├── payment.constants.ts
+├── payment.types.ts
+└── payment.errors.ts
+```
+
+The project follows these source rules:
+
+- Runtime behavior stays in the concern's primary file.
+- Interfaces and type aliases live in `*.types.ts` companions.
+- Static values, DI tokens, patterns, and fixed value sets live in
+  `*.constants.ts` companions.
+- Fixed value sets use `as const` objects and inferred union types; TypeScript
+  enums are not used.
+- NestJS DTO classes remain under `payments/api/dto/` because decorators need
+  them at runtime.
+- Imports point directly to the defining file; barrel files are not used.
+- Generic `types/`, `interfaces/`, and `constants/` folders are avoided while a
+  definition category remains at or below 250 lines.
+
+`test/unit/architecture/source-structure.spec.ts` enforces these conventions so
+new production code cannot silently regress to mixed definition boundaries.
 
 ## Requirements and setup
 
