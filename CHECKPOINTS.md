@@ -481,8 +481,8 @@ bun run test:cov
 - Readiness E2E coverage makes the real repository dependency reject once, verifies the exact `503 SERVICE_NOT_READY` envelope with repository `not_ready` and processor `ready`, checks request-ID/path/timestamp behavior and secret non-disclosure, and restores the dependency spy.
 - Unit coverage collects `src/**/*.{ts,js}` and excludes only `src/main.ts`, module metadata, `src/app.setup.ts`, `src/openapi/swagger.ts`, and DTO files; E2E remains a separate mandatory gate.
 - Jest emits `text`, `lcov`, and `html` reports and enforces global minimums of 85% statements, 80% branches, 85% functions, and 85% lines. A temporary 100% branch threshold made `test:cov` fail while all 126 tests passed, proving threshold enforcement before the approved 80% value was restored.
-- Design and plan commits: `2b1dea2 docs(testing): define coverage enforcement`; `41c81a1 docs(testing): add coverage implementation plan`.
-- Test implementation commits: `0ffda1c test(errors): cover logging and exception behavior`; `9760e98 test(e2e): cover deterministic service flows`; `5563a10 test(coverage): enforce coverage thresholds`.
+- Design and plan commits: `2b1dea22b2bd1dfb34da55291eb8b90be5643963 docs(testing): define coverage enforcement`; `41c81a129b10efe0a5d67e0d1a5d444fb7a36f13 docs(testing): add coverage implementation plan`.
+- Test implementation commits: `0ffda1cd4a1165bd938288b8875ca98276a172b2 test(errors): cover logging and exception behavior`; `9760e9807ed86d01a9a5057d8e6d41da340c9267 test(e2e): cover deterministic service flows`; `5563a10ec342b59967a36c4e2af6c67a52d7e26f test(coverage): enforce coverage thresholds`.
 
 ### Verification evidence — 2026-08-27
 
