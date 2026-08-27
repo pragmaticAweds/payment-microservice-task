@@ -14,26 +14,37 @@ configuration, payment behavior, and test behavior.
 
 ## Approved conventions
 
-### Flat boundary-local files
+### Concern-owned parent folders
 
-Definitions stay next to the boundary that owns them. Do not create generic
-`types/`, `interfaces/`, or `constants/` directories while the definition area
-is 250 lines or fewer.
+Definitions stay with the concern that owns them. When a concern has more than
+one related file, those files live inside a matching parent folder. Do not create
+generic category folders named `types/`, `interfaces/`, or `constants/` while
+the definition area is 250 lines or fewer.
 
 Examples:
 
 ```text
-src/payments/domain/payment.types.ts
-src/payments/domain/payment.constants.ts
+src/payments/domain/payment/payment.ts
+src/payments/domain/payment/payment.types.ts
+src/payments/domain/payment/payment.constants.ts
 src/payments/processing/payment-processing.types.ts
 src/payments/processing/payment-processing.constants.ts
 src/health/health.types.ts
 src/health/health.constants.ts
+src/common/api-response/api-response.ts
+src/common/api-response/api-response.types.ts
+src/common/api-response/api-response.constants.ts
 ```
 
-If a single boundary's definition files grow beyond 250 lines, a future
-refactor may introduce a dedicated subdirectory. This change does not create
-such directories pre-emptively.
+An existing focused parent such as `health/`, `startup/`, `config/`,
+`processing/`, `repositories/`, or `api/dto/` already satisfies this rule. A
+broader mixed parent such as `common/` or `domain/` does not: `api-response` and
+`payment` receive their own concern folders because each has multiple companion
+files.
+
+If a definition category itself grows beyond 250 lines, a future refactor may
+introduce a dedicated category subdirectory. This change does not create such
+directories pre-emptively.
 
 ### File suffixes
 
@@ -77,12 +88,13 @@ export type PaymentStatus =
 
 ## Approaches considered
 
-### 1. Flat files within each boundary — selected
+### 1. Concern-owned parent folders — selected
 
 Each domain, API, application, processing, repository, health, configuration,
-common, and startup boundary owns a small companion types/constants file. This
-keeps ownership explicit, avoids broad shared registries, and satisfies the
-250-line folder rule.
+common, and startup concern owns its behavior and companion definition files.
+Multi-file concerns use a matching parent folder; focused parents that already
+exist are reused. This keeps ownership explicit, avoids broad shared registries,
+and satisfies the 250-line category-folder rule.
 
 ### 2. One pair of files per top-level feature
 
@@ -105,14 +117,15 @@ cross-feature coupling. This approach is rejected.
 
 ### Common boundary
 
-- Flatten the response helper from `common/http/api-response.ts` to
-  `common/api-response.ts`.
-- Move success/error status literals to `common/api-response.constants.ts`.
-- Move `ApiSuccessResponse` to `common/api-response.types.ts`.
-- Move exception-filter and application-error mapper shapes to
-  `common/error.types.ts`.
-- Move logger configuration data to `common/logger.constants.ts` and logger
-  environment typing to `common/logger.types.ts`.
+- Replace the generic `common/http/` placement with the focused
+  `common/api-response/` parent containing `api-response.ts`,
+  `api-response.constants.ts`, and `api-response.types.ts`.
+- Group exception-filter behavior, application-error mapping, and their shapes
+  under the existing focused `common/filters/` parent, with the shapes in
+  `error.types.ts`.
+- Group logger behavior and its companion files beneath
+  `common/logger/`: `logger.config.ts`, `logger.constants.ts`, and
+  `logger.types.ts`.
 - Move reusable Swagger request-ID headers to `common/openapi.constants.ts`.
 - Move throttler names and decorator metadata keys to
   `common/rate-limit/rate-limit.constants.ts`.
@@ -135,27 +148,34 @@ remain in their existing behavior files.
 ### Payment domain boundary
 
 - Replace `payment-status.ts` enums with `PAYMENT_STATUS` and
-  `PAYMENT_CURRENCY` constant objects in `domain/payment.constants.ts`.
+  `PAYMENT_CURRENCY` constant objects in
+  `domain/payment/payment.constants.ts`.
 - Move amount/reference limits and the allowed transition map to the same
   constants file.
 - Move `PaymentStatus`, `PaymentCurrency`, `CreatePaymentInput`, and internal
-  payment property shapes to `domain/payment.types.ts`.
+  payment property shapes to `domain/payment/payment.types.ts`.
 - Keep the `Payment` entity and its validation/transition behavior in
-  `domain/payment.ts`.
+  `domain/payment/payment.ts`, and keep its errors in
+  `domain/payment/payment.errors.ts`.
 
 ### Payment API boundary
 
 - Move controller response aliases to `api/payment-api.types.ts`.
 - Move payment-specific Swagger response headers and allowed transition target
   values to `api/payment-api.constants.ts`.
+- DTO classes remain grouped beneath the existing `api/dto/` parent. Shared DTO
+  validation and Swagger values live in `api/dto/payment-dto.constants.ts`.
 - DTO classes and controller methods remain executable behavior files.
 
 ### Payment application boundary
 
+- Group the multi-file idempotency concern beneath
+  `application/payment-idempotency/`.
 - Move the idempotency-key pattern to
-  `application/payment-idempotency.constants.ts`.
+  `application/payment-idempotency/payment-idempotency.constants.ts`.
 - Move idempotency result and in-flight coordination shapes to
-  `application/payment-idempotency.types.ts`.
+  `application/payment-idempotency/payment-idempotency.types.ts`.
+- Keep the creation coordinator and idempotency errors in the same parent.
 
 ### Payment processing boundary
 
@@ -224,6 +244,7 @@ Add a focused Jest architecture test for `src/` that verifies:
   `*.constants.ts` files, with explicit exceptions for executable factory or
   decorator exports where syntax does not represent static data;
 - no production `types`, `interfaces`, or `constants` directory is introduced;
+- multi-file concerns use a matching parent folder;
 - every new types/constants file remains within the 250-line threshold.
 
 The test is intentionally scoped to production source files, not test fixtures.
