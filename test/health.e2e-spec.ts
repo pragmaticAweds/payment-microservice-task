@@ -7,6 +7,10 @@ import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
 import { validateEnvironment } from '../src/config/environment';
 import { PaymentProcessor } from '../src/payments/processing/payment-processor';
+import {
+  PAYMENT_REPOSITORY,
+  type PaymentRepository,
+} from '../src/payments/repositories/payment.repository';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -129,6 +133,38 @@ describe('Health probes (e2e)', () => {
     expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
     expect(response.headers['x-request-id']).toBe(requestId);
     expect(JSON.stringify(body)).not.toContain('Payment processor');
+  });
+
+  it('returns a safe 503 when the repository readiness check throws', async () => {
+    const repository = app.get<PaymentRepository>(PAYMENT_REPOSITORY);
+    const readiness = jest
+      .spyOn(repository, 'isReady')
+      .mockRejectedValueOnce(new Error('database password must stay internal'));
+    const requestId = 'health-repository-failure';
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/health/ready')
+        .set('X-Request-Id', requestId)
+        .expect(503);
+      const body = response.body as ErrorResponseBody;
+
+      expect(body).toEqual({
+        statusCode: 503,
+        code: 'SERVICE_NOT_READY',
+        message: 'Service is not ready to accept payment work',
+        requestId,
+        timestamp: body.timestamp,
+        path: '/health/ready',
+        details: {
+          checks: { repository: 'not_ready', processor: 'ready' },
+        },
+      });
+      expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
+      expect(JSON.stringify(body)).not.toContain('database password');
+    } finally {
+      readiness.mockRestore();
+    }
   });
 
   it('documents only the unversioned health paths and their response DTOs', async () => {
