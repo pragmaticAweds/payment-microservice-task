@@ -1,28 +1,19 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import type { Payment } from '../domain/payment/payment';
-import type { CreatePaymentInput } from '../domain/payment/payment.types';
-import {
-  PAYMENT_IDEMPOTENCY_REPOSITORY,
-  type PaymentIdempotencyRepository,
-} from '../repositories/payment-idempotency.repository';
+import type { Payment } from '../../domain/payment/payment';
+import type { CreatePaymentInput } from '../../domain/payment/payment.types';
+import { PAYMENT_IDEMPOTENCY_REPOSITORY } from '../../repositories/payment-repository.constants';
+import type { PaymentIdempotencyRepository } from '../../repositories/payment-repository.types';
 import {
   IdempotencyConflictError,
   InvalidIdempotencyKeyError,
 } from './idempotency.errors';
-
-const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
-
-export interface IdempotentPaymentCreationResult {
-  payment: Payment;
-  replayed: boolean;
-}
-
-interface InFlightCreation {
-  fingerprint: string;
-  promise: Promise<IdempotentPaymentCreationResult>;
-}
+import { IDEMPOTENCY_KEY_PATTERN } from './payment-idempotency.constants';
+import type {
+  IdempotentPaymentCreationResult,
+  InFlightCreation,
+} from './payment-idempotency.types';
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');

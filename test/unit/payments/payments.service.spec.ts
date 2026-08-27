@@ -8,7 +8,7 @@ import {
 } from '../../../src/payments/domain/payment/payment.constants';
 import { InvalidPaymentTransitionError } from '../../../src/payments/domain/payment/payment.errors';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
-import { PaymentRepository } from '../../../src/payments/repositories/payment.repository';
+import type { PaymentRepository } from '../../../src/payments/repositories/payment-repository.types';
 
 describe('PaymentsService', () => {
   const input = {

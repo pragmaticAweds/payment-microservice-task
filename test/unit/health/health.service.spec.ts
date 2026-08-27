@@ -3,7 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { HealthController } from '../../../src/health/health.controller';
 import { HealthService } from '../../../src/health/health.service';
 import { PaymentProcessor } from '../../../src/payments/processing/payment-processor';
-import type { PaymentRepository } from '../../../src/payments/repositories/payment.repository';
+import type { PaymentRepository } from '../../../src/payments/repositories/payment-repository.types';
 
 interface HealthLogMetadata {
   event?: unknown;

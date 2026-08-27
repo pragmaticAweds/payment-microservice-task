@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import {
   IdempotencyConflictError,
   InvalidIdempotencyKeyError,
-} from '../../payments/application/idempotency.errors';
+} from '../../payments/application/payment-idempotency/idempotency.errors';
 import { PaymentNotFoundError } from '../../payments/application/payment-not-found.error';
 import {
   InvalidPaymentError,

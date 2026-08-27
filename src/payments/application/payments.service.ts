@@ -5,8 +5,8 @@ import type {
   CreatePaymentInput,
   PaymentStatus,
 } from '../domain/payment/payment.types';
-import { PAYMENT_REPOSITORY } from '../repositories/payment.repository';
-import type { PaymentRepository } from '../repositories/payment.repository';
+import { PAYMENT_REPOSITORY } from '../repositories/payment-repository.constants';
+import type { PaymentRepository } from '../repositories/payment-repository.types';
 import { PaymentNotFoundError } from './payment-not-found.error';
 
 @Injectable()

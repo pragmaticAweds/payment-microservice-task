@@ -1,7 +1,5 @@
-import { Payment } from '../domain/payment/payment';
+import type { Payment } from '../domain/payment/payment';
 import type { PaymentStatus } from '../domain/payment/payment.types';
-
-export const PAYMENT_REPOSITORY = Symbol('PAYMENT_REPOSITORY');
 
 export interface PaymentTransition {
   previous: Payment;
@@ -17,4 +15,17 @@ export interface PaymentRepository {
     nextStatus: PaymentStatus,
   ): Promise<PaymentTransition | null>;
   isReady(): Promise<boolean>;
+}
+
+export interface PaymentIdempotencyRecord {
+  readonly key: string;
+  readonly fingerprint: string;
+  readonly paymentId: string;
+  readonly response: Payment;
+  readonly createdAt: string;
+}
+
+export interface PaymentIdempotencyRepository {
+  save(record: PaymentIdempotencyRecord): Promise<void>;
+  findByKey(key: string): Promise<PaymentIdempotencyRecord | null>;
 }

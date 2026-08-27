@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentsController } from '../../../src/payments/api/payments.controller';
-import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
+import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-idempotency/payment-creation-idempotency.service';
 import { PaymentsService } from '../../../src/payments/application/payments.service';
 import {
   PAYMENT_CURRENCY,
@@ -13,7 +13,7 @@ import { PaymentProcessor } from '../../../src/payments/processing/payment-proce
 import { TimeoutProcessingScheduler } from '../../../src/payments/processing/timeout-processing.scheduler';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
 import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';
-import type { PaymentRepository } from '../../../src/payments/repositories/payment.repository';
+import type { PaymentRepository } from '../../../src/payments/repositories/payment-repository.types';
 
 interface TestLogMetadata {
   event?: unknown;

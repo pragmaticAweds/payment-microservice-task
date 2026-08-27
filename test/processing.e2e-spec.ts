@@ -14,10 +14,8 @@ import {
   type ScheduledProcessingTask,
 } from '../src/payments/processing/processing-scheduler';
 import { InMemoryPaymentRepository } from '../src/payments/repositories/in-memory-payment.repository';
-import {
-  PAYMENT_REPOSITORY,
-  type PaymentRepository,
-} from '../src/payments/repositories/payment.repository';
+import { PAYMENT_REPOSITORY } from '../src/payments/repositories/payment-repository.constants';
+import type { PaymentRepository } from '../src/payments/repositories/payment-repository.types';
 
 interface ControlledTask {
   canceled: boolean;

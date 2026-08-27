@@ -5,10 +5,8 @@ import {
 } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentProcessor } from '../payments/processing/payment-processor';
-import {
-  PAYMENT_REPOSITORY,
-  type PaymentRepository,
-} from '../payments/repositories/payment.repository';
+import { PAYMENT_REPOSITORY } from '../payments/repositories/payment-repository.constants';
+import type { PaymentRepository } from '../payments/repositories/payment-repository.types';
 import type {
   HealthDependencyStatus,
   HealthReadinessChecks,

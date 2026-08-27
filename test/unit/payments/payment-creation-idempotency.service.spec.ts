@@ -2,8 +2,8 @@ import { PinoLogger } from 'nestjs-pino';
 import {
   IdempotencyConflictError,
   InvalidIdempotencyKeyError,
-} from '../../../src/payments/application/idempotency.errors';
-import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
+} from '../../../src/payments/application/payment-idempotency/idempotency.errors';
+import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-idempotency/payment-creation-idempotency.service';
 import { Payment } from '../../../src/payments/domain/payment/payment';
 import { PAYMENT_CURRENCY } from '../../../src/payments/domain/payment/payment.constants';
 import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';

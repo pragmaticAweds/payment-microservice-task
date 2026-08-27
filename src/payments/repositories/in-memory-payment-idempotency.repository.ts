@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import {
+import type {
   PaymentIdempotencyRecord,
   PaymentIdempotencyRepository,
-} from './payment-idempotency.repository';
+} from './payment-repository.types';
 
 @Injectable()
 export class InMemoryPaymentIdempotencyRepository implements PaymentIdempotencyRepository {

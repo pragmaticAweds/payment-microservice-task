@@ -3,7 +3,7 @@ import { mapApplicationError } from '../../src/common/filters/application-error.
 import {
   IdempotencyConflictError,
   InvalidIdempotencyKeyError,
-} from '../../src/payments/application/idempotency.errors';
+} from '../../src/payments/application/payment-idempotency/idempotency.errors';
 import { PaymentNotFoundError } from '../../src/payments/application/payment-not-found.error';
 import {
   InvalidPaymentError,

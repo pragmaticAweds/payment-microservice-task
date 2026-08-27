@@ -26,7 +26,7 @@ import { successResponse } from '../../common/api-response/api-response';
 import type { ApiSuccessResponse } from '../../common/api-response/api-response.types';
 import { ErrorResponseDto } from '../../common/openapi/error-response.dto';
 import { PaymentCreationRateLimit } from '../../common/rate-limit/payment-creation-rate-limit.decorator';
-import { PaymentCreationIdempotencyService } from '../application/payment-creation-idempotency.service';
+import { PaymentCreationIdempotencyService } from '../application/payment-idempotency/payment-creation-idempotency.service';
 import { PaymentsService } from '../application/payments.service';
 import type { Payment } from '../domain/payment/payment';
 import { PaymentProcessor } from '../processing/payment-processor';

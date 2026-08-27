@@ -1,7 +1,7 @@
 import { TestingModule, Test } from '@nestjs/testing';
 import { CommonModule } from '../../../src/common/common.module';
 import { RuntimeConfigModule } from '../../../src/config/runtime-config.module';
-import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-creation-idempotency.service';
+import { PaymentCreationIdempotencyService } from '../../../src/payments/application/payment-idempotency/payment-creation-idempotency.service';
 import { Payment } from '../../../src/payments/domain/payment/payment';
 import { PAYMENT_CURRENCY } from '../../../src/payments/domain/payment/payment.constants';
 import { PaymentsModule } from '../../../src/payments/payments.module';
@@ -14,12 +14,12 @@ import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repo
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';
 import {
   PAYMENT_IDEMPOTENCY_REPOSITORY,
-  type PaymentIdempotencyRepository,
-} from '../../../src/payments/repositories/payment-idempotency.repository';
-import {
   PAYMENT_REPOSITORY,
-  type PaymentRepository,
-} from '../../../src/payments/repositories/payment.repository';
+} from '../../../src/payments/repositories/payment-repository.constants';
+import type {
+  PaymentIdempotencyRepository,
+  PaymentRepository,
+} from '../../../src/payments/repositories/payment-repository.types';
 
 describe('PaymentsModule', () => {
   let moduleRef: TestingModule;

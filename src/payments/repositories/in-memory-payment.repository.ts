@@ -1,7 +1,10 @@
 import { BeforeApplicationShutdown, Injectable } from '@nestjs/common';
 import { Payment } from '../domain/payment/payment';
 import type { PaymentStatus } from '../domain/payment/payment.types';
-import { PaymentRepository, PaymentTransition } from './payment.repository';
+import type {
+  PaymentRepository,
+  PaymentTransition,
+} from './payment-repository.types';
 
 @Injectable()
 export class InMemoryPaymentRepository

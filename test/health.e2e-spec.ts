@@ -7,10 +7,8 @@ import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
 import { validateEnvironment } from '../src/config/environment';
 import { PaymentProcessor } from '../src/payments/processing/payment-processor';
-import {
-  PAYMENT_REPOSITORY,
-  type PaymentRepository,
-} from '../src/payments/repositories/payment.repository';
+import { PAYMENT_REPOSITORY } from '../src/payments/repositories/payment-repository.constants';
+import type { PaymentRepository } from '../src/payments/repositories/payment-repository.types';
 
 interface ErrorResponseBody {
   status: 'error';

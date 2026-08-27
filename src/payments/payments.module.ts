@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PaymentsController } from './api/payments.controller';
-import { PaymentCreationIdempotencyService } from './application/payment-creation-idempotency.service';
+import { PaymentCreationIdempotencyService } from './application/payment-idempotency/payment-creation-idempotency.service';
 import { PaymentsService } from './application/payments.service';
 import { DeterministicPaymentOutcomeResolver } from './processing/deterministic-payment-outcome.resolver';
 import { PAYMENT_OUTCOME_RESOLVER } from './processing/payment-outcome-resolver';
@@ -9,8 +9,10 @@ import { PROCESSING_SCHEDULER } from './processing/processing-scheduler';
 import { TimeoutProcessingScheduler } from './processing/timeout-processing.scheduler';
 import { InMemoryPaymentIdempotencyRepository } from './repositories/in-memory-payment-idempotency.repository';
 import { InMemoryPaymentRepository } from './repositories/in-memory-payment.repository';
-import { PAYMENT_IDEMPOTENCY_REPOSITORY } from './repositories/payment-idempotency.repository';
-import { PAYMENT_REPOSITORY } from './repositories/payment.repository';
+import {
+  PAYMENT_IDEMPOTENCY_REPOSITORY,
+  PAYMENT_REPOSITORY,
+} from './repositories/payment-repository.constants';
 
 @Module({
   controllers: [PaymentsController],

@@ -1,7 +1,7 @@
 import { Payment } from '../../../src/payments/domain/payment/payment';
 import { PAYMENT_CURRENCY } from '../../../src/payments/domain/payment/payment.constants';
 import { InMemoryPaymentIdempotencyRepository } from '../../../src/payments/repositories/in-memory-payment-idempotency.repository';
-import { PaymentIdempotencyRecord } from '../../../src/payments/repositories/payment-idempotency.repository';
+import type { PaymentIdempotencyRecord } from '../../../src/payments/repositories/payment-repository.types';
 
 describe('InMemoryPaymentIdempotencyRepository', () => {
   const payment = Payment.create({
