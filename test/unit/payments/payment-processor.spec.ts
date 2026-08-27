@@ -362,6 +362,44 @@ describe('PaymentProcessor', () => {
     });
   });
 
+  it('fails a processing payment when final shutdown cancels its completion timer', async () => {
+    const { payments, processor } = createHarness();
+    const payment = await payments.create(input);
+    processor.schedule(payment, 'queued-completion-key');
+    await jest.advanceTimersByTimeAsync(0);
+    await expect(payments.findById(payment.id)).resolves.toMatchObject({
+      status: PaymentStatus.PROCESSING,
+    });
+
+    await processor.onApplicationShutdown();
+
+    await expect(payments.findById(payment.id)).resolves.toMatchObject({
+      status: PaymentStatus.FAILED,
+    });
+  });
+
+  it('logs and consumes a canceled-completion recovery failure', async () => {
+    const repository = new ToggleFailureRepository();
+    const { payments, processor } = createHarness({ repository });
+    const payment = await payments.create(input);
+    processor.schedule(payment, 'queued-recovery-failure-key');
+    await jest.advanceTimersByTimeAsync(0);
+    repository.failedSavesRemaining = Number.POSITIVE_INFINITY;
+
+    await expect(processor.onApplicationShutdown()).resolves.toBeUndefined();
+
+    const recoveryFailureLog = errorLogs.find(
+      (metadata) =>
+        metadata.event === 'payment.processing_shutdown_recovery_failed',
+    );
+    expect(recoveryFailureLog).toMatchObject({
+      event: 'payment.processing_shutdown_recovery_failed',
+      paymentId: payment.id,
+      phase: 'completing',
+    });
+    expect(recoveryFailureLog?.err).toBeInstanceOf(Error);
+  });
+
   it('cancels queued work and rejects new schedules during final shutdown', async () => {
     const { payments, processor } = createHarness();
     const payment = await payments.create(input);

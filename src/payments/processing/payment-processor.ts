@@ -37,7 +37,10 @@ export class PaymentProcessor
   implements BeforeApplicationShutdown, OnApplicationShutdown
 {
   private readonly delayMs: number;
-  private readonly scheduledTasks = new Set<ScheduledProcessingTask>();
+  private readonly scheduledTasks = new Map<
+    ScheduledProcessingTask,
+    ProcessingContext
+  >();
   private readonly inFlightWork = new Set<Promise<void>>();
   private ready = true;
   private stopped = false;
@@ -93,10 +96,17 @@ export class PaymentProcessor
     this.ready = false;
     if (!this.stopped) {
       this.stopped = true;
-      for (const task of this.scheduledTasks) {
+      const recoveries: Promise<void>[] = [];
+      for (const [task, context] of this.scheduledTasks) {
+        if (!this.scheduledTasks.delete(task)) {
+          continue;
+        }
         task.cancel();
+        if (context.phase === 'completing') {
+          recoveries.push(this.recoverCanceledCompletion(context));
+        }
       }
-      this.scheduledTasks.clear();
+      await Promise.all(recoveries);
     }
 
     await Promise.all([...this.inFlightWork]);
@@ -113,8 +123,8 @@ export class PaymentProcessor
 
     let scheduled: ScheduledProcessingTask | undefined = undefined;
     scheduled = this.scheduler.schedule(delayMs, () => {
-      if (scheduled !== undefined) {
-        this.scheduledTasks.delete(scheduled);
+      if (scheduled === undefined || !this.scheduledTasks.delete(scheduled)) {
+        return;
       }
       const processing = Promise.resolve()
         .then(work)
@@ -125,7 +135,7 @@ export class PaymentProcessor
         () => this.inFlightWork.delete(processing),
       );
     });
-    this.scheduledTasks.add(scheduled);
+    this.scheduledTasks.set(scheduled, context);
     return true;
   }
 
@@ -230,6 +240,27 @@ export class PaymentProcessor
     }
     if (current.status === PaymentStatus.PROCESSING) {
       await this.payments.transition(paymentId, PaymentStatus.FAILED);
+    }
+  }
+
+  private async recoverCanceledCompletion(
+    context: ProcessingContext,
+  ): Promise<void> {
+    try {
+      await this.transitionActivePaymentToFailed(context.paymentId);
+    } catch (recoveryError) {
+      this.logger.error(
+        {
+          event: 'payment.processing_shutdown_recovery_failed',
+          paymentId: context.paymentId,
+          phase: context.phase,
+          err:
+            recoveryError instanceof Error
+              ? recoveryError
+              : new Error('Unknown shutdown recovery failure'),
+        },
+        'Payment processing shutdown recovery failed',
+      );
     }
   }
 }
