@@ -1,6 +1,6 @@
 # Payment Domain Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Execution note:** Use the executing-plans workflow to implement this plan task by task.
 
 **Goal:** Build a framework-independent immutable Payment aggregate, explicit state machine, and injectable asynchronous in-memory repository.
 

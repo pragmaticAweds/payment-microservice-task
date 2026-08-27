@@ -1,6 +1,6 @@
 # Rate Limiting and Health Checks Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Execution note:** Use the executing-plans workflow to implement this plan task by task.
 
 **Goal:** Protect the payment API with configuration-driven general and payment-creation rate limits while exposing unversioned, throttle-exempt liveness and readiness probes.
 

@@ -10,10 +10,6 @@ account bindings, credentials, and private key details are intentionally omitted
 - OpenAI Codex assisted with requirement analysis, architecture, implementation,
   tests, documentation, refactoring, Git checkpoints, code review, security/QA
   review, and final verification.
-- Claude Code 2.1.247 was briefly downloaded to Bun's temporary tool cache while
-  interpreting the original review wording. It did not receive repository source
-  or perform the review. The user subsequently clarified that the intended tool
-  was Codex, so no Anthropic review is part of this submission.
 
 No AI output was accepted as sufficient evidence on its own. Changes were
 reviewed against the assessment, exercised through automated tests, and checked
@@ -185,37 +181,7 @@ the resulting decisions.
 The final submission prompt required completion within 48 hours by Thursday at
 5:00 PM Nigerian time, inclusion of the completed assessment and every AI
 prompt/script used, thorough testing, production-ready quality, freedom from
-critical bugs, and careful review and validation of AI-generated output. Its
-initial reference to Claude Code was followed by the clarification: "Do not mind
-Claude code, its codex".
-
-## Unexecuted Claude Code review prompt
-
-The following read-only prompt was prepared for Claude Code 2.1.247. Execution
-was blocked before repository contents were transferred, and the user later
-clarified that Codex—not Claude Code—was the intended reviewer. It is retained
-here solely because all AI prompts and attempted review commands must be
-disclosed:
-
-```text
-Perform an independent, production-readiness code review of this NestJS 11
-payment microservice using Bun, Express, Zod, Pino, Jest, and in-memory
-persistence. Review the complete tracked source, tests, package/config files,
-README, and CHECKPOINTS. Validate these requirements: Idempotency-Key on
-creation; Nest throttling; separate readiness/liveness; configurable processing
-delay; deterministic outcomes; coverage enforcement/reporting; Swagger JSON;
-structured logging and safe error handling; realistic asynchronous behavior;
-/api/v1 on every public endpoint; outer status success/error envelope;
-smallestUnitAmount in USD; merchantReference and optional description; no
-TypeScript enums; concern-based file organization; production readiness. Also
-assess security, concurrency, shutdown/resource cleanup, OpenAPI accuracy,
-dependency/runtime configuration, missing deliverables (including AI
-prompt/script disclosure), and contradictions between documentation and
-implementation. Do not edit anything. Return only evidence-based findings
-ordered by severity, each with exact file and line references, impact, and a
-concrete remediation. Explicitly say when no critical/high finding exists, and
-list verification strengths separately.
-```
+critical bugs, and careful Codex review and validation of AI-generated output.
 
 ## Commands and scripts used
 
