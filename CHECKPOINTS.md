@@ -229,8 +229,8 @@ bun run typecheck
 - Implement `POST /api/v1/payments`.
 - Implement `GET /api/v1/payments/:id`.
 - Implement `PATCH /api/v1/payments/:id/status` with explicit transition rules.
-- Expose Swagger UI at `/docs`.
-- Expose OpenAPI JSON at `/docs-json`.
+- Expose Swagger UI at `/api/v1/docs`.
+- Expose OpenAPI JSON at `/api/v1/docs-json`.
 - Document request headers, DTOs, examples, success responses, and all error responses.
 
 ### Acceptance criteria
@@ -239,7 +239,7 @@ bun run typecheck
 - Invalid UUIDs and payloads return `400`.
 - Unknown payments return `404`.
 - Invalid transitions return `409`.
-- `/docs` renders and `/docs-json` returns a valid OpenAPI document.
+- `/api/v1/docs` renders and `/api/v1/docs-json` returns a valid OpenAPI document.
 
 ### Verification
 
@@ -255,7 +255,7 @@ bun run build
 - `POST /api/v1/payments` creates a pending USD payment and returns it in a `data` envelope.
 - `GET /api/v1/payments/:id` retrieves a payment; `PATCH /api/v1/payments/:id/status` enforces the domain state machine.
 - Validation and application errors map to the documented `400`, `404`, and `409` response envelopes.
-- Swagger UI is available at `/docs`; the OpenAPI 3 JSON contract is available at `/docs-json`.
+- Swagger UI is available at `/api/v1/docs`; the OpenAPI 3 JSON contract is available at `/api/v1/docs-json`.
 - Swagger documents DTO constraints, examples, `X-Request-Id`, response correlation headers, and every endpoint response code.
 - Application actions are asynchronous and emit structured `payment.created` and `payment.status_transitioned` logs.
 - Atomic commits: `9aefa8c`, `710eadd`, `0cd482b`, and `5a6729b` (with design and execution plans in `1789de3` and `3f155f7`).
@@ -268,7 +268,7 @@ bun run build
 - `bun run test`: 8 suites, 45 tests passed.
 - `bun run test:e2e -- payments`: 1 suite, 29 tests passed.
 - `bun run test:e2e`: 3 suites, 37 tests passed.
-- `/docs` rendered successfully in the in-app browser with all payment operations visible and no browser console warnings or errors.
+- Swagger rendered successfully with all payment operations visible; the current versioned location is `/api/v1/docs`.
 
 ---
 
@@ -384,8 +384,8 @@ bun run typecheck
 - Apply a stricter policy to payment creation.
 - Return the standard error envelope for `429` responses.
 - Exempt health endpoints from throttling.
-- Implement `GET /health/live`.
-- Implement `GET /health/ready` using repository and processor readiness.
+- Implement `GET /api/v1/health/live`.
+- Implement `GET /api/v1/health/ready` using repository and processor readiness.
 - Make readiness return `503` while the application is shutting down.
 
 ### Acceptance criteria
@@ -410,10 +410,10 @@ bun run typecheck
 - The global throttler guard returns the standard `429 TOO_MANY_REQUESTS` error envelope and accurate standard limit, remaining, reset, and retry headers for the policy that was exhausted while retaining named-policy headers.
 - A controller metadata marker applies `payment-create` only to `POST /api/v1/payments`; retrieval and other handlers remain on the default policy.
 - Both liveness and readiness explicitly skip the `default` and `payment-create` policies, so probes remain available after normal API limits are exhausted.
-- `GET /health/live` is an unversioned process-only probe. `GET /health/ready` composes the repository and processor readiness signals and returns a safe structured `503 SERVICE_NOT_READY` response when either signal is unavailable, false, or throws.
+- `GET /api/v1/health/live` is a process-only probe. `GET /api/v1/health/ready` composes the repository and processor readiness signals and returns a safe structured `503 SERVICE_NOT_READY` response when either signal is unavailable, false, or throws.
 - Readiness failures emit structured warning/error logs without exposing internal exception details in the client response.
 - Shutdown is two-phase and race-safe: the early hook makes readiness false while allowing already-admitted creations to finish scheduling; final shutdown rejects new schedules, cancels queued timers, drains tracked asynchronous callbacks, and prevents canceled work from being stranded in `processing`.
-- Swagger includes the `Health` tag, unversioned liveness/readiness success contracts, the readiness `503` contract, payment-create rate-limit headers and `429` response, and the same contracts in `/docs-json`.
+- Swagger includes the `Health` tag, versioned liveness/readiness success contracts, the readiness `503` contract, payment-create rate-limit headers and `429` response, and the same contracts in `/api/v1/docs-json`.
 - Design and plan commits: `1f1f71a docs(operations): define rate limiting and health checks`; `7d4b33c docs(operations): add rate limiting and health plan`; `b7a76d0 docs(operations): use published throttler release`.
 - Rate-limit implementation and corrections: `44414f0 feat(rate-limit): configure global request throttling`; `45da20e fix(rate-limit): expose standard limit headers`; `725ce70 feat(rate-limit): protect payment creation`; `351680b fix(swagger): document throttled limit headers`.
 - Readiness and shutdown implementation, design corrections, and race fixes: `81de7db feat(health): expose payment readiness signals`; `6b02402 docs(operations): clarify shutdown draining`; `92e123a fix(processing): drain work during shutdown`; `fbfdb1d docs(operations): define shutdown admission draining`; `8a63ef9 fix(processing): finalize canceled completions`; `929e930 fix(processing): drain admitted creations`.
@@ -428,8 +428,8 @@ bun run typecheck
 - `bun run test`: 16 suites, 106 tests passed.
 - `bun run test:e2e`: 6 suites, 59 tests passed.
 - `bun run test:e2e -- --detectOpenHandles`: 6 suites, 59 tests passed with no open-handle or unhandled-rejection warnings.
-- A built service started through Bun on `PORT=3108`: `/health/live` returned `200 {"data":{"status":"live"}}`; `/health/ready` returned `200 {"data":{"status":"ready","checks":{"repository":"ready","processor":"ready"}}}`; `/api/v1/health/live` returned the standard `404 NOT_FOUND` envelope; `/docs-json` returned `200`.
-- The downloaded document parsed as OpenAPI 3.0.0, contained `/health/live` and `/health/ready` but no `/api/v1/health/*` path, documented `429` on `POST /api/v1/payments`, documented liveness `200` and readiness `200`/`503`, and included the `Health` tag.
+- The original Checkpoint 8 runtime evidence was superseded by the versioned API-contract verification recorded in Checkpoint 10.
+- The current OpenAPI document contains `/api/v1/health/live` and `/api/v1/health/ready`, documents `429` on `POST /api/v1/payments`, documents liveness `200` and readiness `200`/`503`, and includes the `Health` tag.
 - The runtime process was stopped after verification and left no listener on port 3108.
 - Verification ran on `codex/feat/payment-microservice` with a clean worktree and no Git remote.
 
@@ -533,14 +533,30 @@ bun run build
 - API examples cover `smallestUnitAmount` as US cents, USD-only currency,
   merchant references, descriptions, header-based idempotency, retrieval, and
   manual state transitions.
-- Operational documentation covers global and creation rate limits, unversioned
-  liveness/readiness, Swagger UI and JSON, the error envelope, request
+- Operational documentation covers global and creation rate limits, versioned
+  liveness/readiness, Swagger UI and JSON, the success/error envelopes, request
   correlation, Pino levels, and redaction.
+- Every public route, including health and Swagger, uses `/api/v1`; old
+  unversioned health and Swagger JSON routes return the standardized error
+  envelope with `status: "error"`.
+- Successful controller responses use top-level `status: "success"` and `data`,
+  while payment and health lifecycle state remains in `data.status`.
+- Controller-adjacent `.rest` files provide runnable service, health, payment,
+  idempotency replay/conflict, validation, retrieval, and transition requests.
+- The default port is `4040`; a post-bind `service.started` event reports the
+  effective port and versioned API URL.
 - Testing documentation lists the unit, E2E, open-handle, coverage, formatting,
   linting, type-checking, and build commands plus the enforced thresholds.
 - Assumptions and production trade-offs clearly identify the memory-resident
   adapters, process-local coordination, local timers, and excluded infrastructure.
-- Atomic README commit: `8f9defb docs(readme): document payment microservice`.
+- API contract design commit: `e1e9c15 docs(api): define versioned response contract`.
+- API contract plan commit: `65b452e docs(api): add versioned contract implementation plan`.
+- Port commit: `ba16740 feat(config): use port 4040 by default`.
+- Route commit: `0dac1db feat(api): version all public routes`.
+- Envelope commit: `ff6aee1 feat(api): standardize response envelopes`.
+- Startup log commit: `079a587 feat(observability): log effective API endpoint`.
+- REST documentation commit: `d943da8 docs(api): add controller REST requests`.
+- Startup fix commit: `7fe50c9 fix(observability): resolve scoped startup logger`.
 
 ### Verification evidence — 2026-08-27
 
@@ -548,23 +564,30 @@ bun run build
   packages with no changes.
 - `bun run format:check`, `bun run lint`, `bun run typecheck`, `bun run build`,
   and `git diff --check`: exited successfully.
-- `bun run test`: 19 suites, 129 tests passed.
-- `bun run test:e2e`: 6 suites, 61 tests passed.
-- `bun run test:e2e -- --runInBand --detectOpenHandles`: 6 suites, 61 tests
+- `bun run test`: 20 suites, 133 tests passed.
+- `bun run test:e2e`: 6 suites, 63 tests passed.
+- `bun run test:e2e -- --runInBand --detectOpenHandles`: 6 suites, 63 tests
   passed with no reported open handles.
-- `bun run test:cov`: 19 suites, 129 tests passed at 97.91% statements, 84.83%
-  branches, 95.74% functions, and 97.76% lines; LCOV and HTML output were
+- `bun run test:cov`: 20 suites, 133 tests passed at 98% statements, 84.83%
+  branches, 95.87% functions, and 97.87% lines; LCOV and HTML output were
   generated, verified as ignored, and moved out of the repository afterward.
-- The compiled service started with `bun run start:prod`; `/api/v1`,
-  `/health/live`, `/health/ready`, and `/docs-json` returned `200`.
-- A live payment request returned `201` with `pending`; the same key and payload
-  returned the original response with `Idempotency-Replayed: true`; retrieval
-  returned the deterministic terminal `succeeded` state.
-- OpenAPI JSON parsed as version 3.0.0 and contained every documented payment and
-  health path without a versioned health route.
-- Both temporary runtime processes were stopped, leaving no verification listener.
+- The default-port configuration and startup-context tests verify `4040` and
+  `http://localhost:4040/api/v1`. A pre-existing user-owned listener occupied
+  `4040` during the live check, so it was left untouched and runtime verification
+  used the explicit temporary port `4141`.
+- The compiled service emitted `service.started` after binding with port `4141`
+  and `http://localhost:4141/api/v1`; `/api/v1`, `/api/v1/health/live`,
+  `/api/v1/health/ready`, and `/api/v1/docs-json` returned `200`.
+- The service and health responses used top-level `status: "success"` with their
+  operational state inside `data.status`; OpenAPI 3.0.0 exposed the documented
+  versioned paths and status schemas.
+- `/health/live` and `/docs-json` returned `404` with top-level
+  `status: "error"` and `code: "NOT_FOUND"`.
+- The temporary port `4141` listener was stopped after verification. The
+  pre-existing user-owned listener on `4040` remained untouched.
 - Documentation contains no machine-specific workspace path or account binding.
-- Verification ran on `codex/feat/payment-microservice` with no Git remote.
+- Git status was clean on `codex/feat/payment-microservice`; no generated build
+  or coverage output was tracked, and no Git remote was configured.
 
 ---
 
