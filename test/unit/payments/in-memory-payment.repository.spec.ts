@@ -52,4 +52,12 @@ describe('InMemoryPaymentRepository', () => {
     await expect(repository.findById(first.id)).resolves.toBe(first);
     await expect(repository.findById(second.id)).resolves.toBe(second);
   });
+
+  it('reports ready until application shutdown begins', async () => {
+    await expect(repository.isReady()).resolves.toBe(true);
+
+    repository.beforeApplicationShutdown();
+
+    await expect(repository.isReady()).resolves.toBe(false);
+  });
 });

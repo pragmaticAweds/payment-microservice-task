@@ -27,6 +27,7 @@ describe('PaymentsService', () => {
     repositorySave = jest.fn().mockResolvedValue(undefined);
     repository = {
       findById: jest.fn(),
+      isReady: jest.fn().mockResolvedValue(true),
       save: repositorySave,
     };
     loggerInfo = jest.fn();

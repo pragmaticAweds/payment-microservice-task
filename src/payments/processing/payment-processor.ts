@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
-import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
+import {
+  BeforeApplicationShutdown,
+  Inject,
+  Injectable,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentsService } from '../application/payments.service';
@@ -28,7 +33,9 @@ interface ProcessingContext {
 }
 
 @Injectable()
-export class PaymentProcessor implements OnApplicationShutdown {
+export class PaymentProcessor
+  implements BeforeApplicationShutdown, OnApplicationShutdown
+{
   private readonly delayMs: number;
   private readonly scheduledTasks = new Set<ScheduledProcessingTask>();
   private acceptingWork = true;
@@ -76,7 +83,15 @@ export class PaymentProcessor implements OnApplicationShutdown {
     return this.acceptingWork;
   }
 
+  beforeApplicationShutdown(): void {
+    this.stopAcceptingWork();
+  }
+
   onApplicationShutdown(): void {
+    this.stopAcceptingWork();
+  }
+
+  private stopAcceptingWork(): void {
     this.acceptingWork = false;
     for (const task of this.scheduledTasks) {
       task.cancel();

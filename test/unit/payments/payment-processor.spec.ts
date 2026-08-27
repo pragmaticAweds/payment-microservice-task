@@ -38,6 +38,10 @@ class ToggleFailureRepository implements PaymentRepository {
   findById(id: string): ReturnType<PaymentRepository['findById']> {
     return this.delegate.findById(id);
   }
+
+  isReady(): Promise<boolean> {
+    return this.delegate.isReady();
+  }
 }
 
 describe('PaymentProcessor', () => {
@@ -274,7 +278,7 @@ describe('PaymentProcessor', () => {
     const payment = await payments.create(input);
     processor.schedule(payment, 'shutdown-key');
 
-    processor.onApplicationShutdown();
+    processor.beforeApplicationShutdown();
 
     expect(processor.isReady()).toBe(false);
     expect(() => processor.schedule(payment, 'late-key')).toThrow(
