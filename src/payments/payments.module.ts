@@ -3,9 +3,11 @@ import { PaymentsController } from './api/payments.controller';
 import { PaymentCreationIdempotencyService } from './application/payment-idempotency/payment-creation-idempotency.service';
 import { PaymentsService } from './application/payments.service';
 import { DeterministicPaymentOutcomeResolver } from './processing/deterministic-payment-outcome.resolver';
-import { PAYMENT_OUTCOME_RESOLVER } from './processing/payment-outcome-resolver';
+import {
+  PAYMENT_OUTCOME_RESOLVER,
+  PROCESSING_SCHEDULER,
+} from './processing/payment-processing.constants';
 import { PaymentProcessor } from './processing/payment-processor';
-import { PROCESSING_SCHEDULER } from './processing/processing-scheduler';
 import { TimeoutProcessingScheduler } from './processing/timeout-processing.scheduler';
 import { InMemoryPaymentIdempotencyRepository } from './repositories/in-memory-payment-idempotency.repository';
 import { InMemoryPaymentRepository } from './repositories/in-memory-payment.repository';

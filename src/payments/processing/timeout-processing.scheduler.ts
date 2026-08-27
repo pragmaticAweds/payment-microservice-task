@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import {
-  type ProcessingScheduler,
-  type ScheduledProcessingTask,
-} from './processing-scheduler';
+import type {
+  ProcessingScheduler,
+  ScheduledProcessingTask,
+} from './payment-processing.types';
 
 @Injectable()
 export class TimeoutProcessingScheduler implements ProcessingScheduler {

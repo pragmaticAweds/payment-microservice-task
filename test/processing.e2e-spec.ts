@@ -8,11 +8,11 @@ import { configureApplication } from '../src/app.setup';
 import type { Payment } from '../src/payments/domain/payment/payment';
 import { PAYMENT_STATUS } from '../src/payments/domain/payment/payment.constants';
 import type { PaymentStatus } from '../src/payments/domain/payment/payment.types';
-import {
-  PROCESSING_SCHEDULER,
-  type ProcessingScheduler,
-  type ScheduledProcessingTask,
-} from '../src/payments/processing/processing-scheduler';
+import { PROCESSING_SCHEDULER } from '../src/payments/processing/payment-processing.constants';
+import type {
+  ProcessingScheduler,
+  ScheduledProcessingTask,
+} from '../src/payments/processing/payment-processing.types';
 import { InMemoryPaymentRepository } from '../src/payments/repositories/in-memory-payment.repository';
 import { PAYMENT_REPOSITORY } from '../src/payments/repositories/payment-repository.constants';
 import type { PaymentRepository } from '../src/payments/repositories/payment-repository.types';

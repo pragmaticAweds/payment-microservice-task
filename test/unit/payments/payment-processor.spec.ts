@@ -8,7 +8,7 @@ import {
   PAYMENT_CURRENCY,
   PAYMENT_STATUS,
 } from '../../../src/payments/domain/payment/payment.constants';
-import type { PaymentOutcomeResolver } from '../../../src/payments/processing/payment-outcome-resolver';
+import type { PaymentOutcomeResolver } from '../../../src/payments/processing/payment-processing.types';
 import { PaymentProcessor } from '../../../src/payments/processing/payment-processor';
 import { TimeoutProcessingScheduler } from '../../../src/payments/processing/timeout-processing.scheduler';
 import { InMemoryPaymentRepository } from '../../../src/payments/repositories/in-memory-payment.repository';

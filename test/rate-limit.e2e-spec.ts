@@ -7,10 +7,8 @@ import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/app.setup';
 import { validateEnvironment } from '../src/config/environment';
-import {
-  type PaymentCreationAdmission,
-  PaymentProcessor,
-} from '../src/payments/processing/payment-processor';
+import type { PaymentCreationAdmission } from '../src/payments/processing/payment-processing.types';
+import { PaymentProcessor } from '../src/payments/processing/payment-processor';
 
 interface ErrorResponseBody {
   status: 'error';

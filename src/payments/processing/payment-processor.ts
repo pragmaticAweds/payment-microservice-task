@@ -12,29 +12,15 @@ import type { Payment } from '../domain/payment/payment';
 import { PAYMENT_STATUS } from '../domain/payment/payment.constants';
 import {
   PAYMENT_OUTCOME_RESOLVER,
-  type PaymentOutcomeResolver,
-} from './payment-outcome-resolver';
-import {
   PROCESSING_SCHEDULER,
-  type ProcessingScheduler,
-  type ScheduledProcessingTask,
-} from './processing-scheduler';
-
-type ProcessingPhase = 'starting' | 'completing';
-
-interface ProcessingContext {
-  paymentId: string;
-  idempotencyKey: string;
-  keyHash: string;
-  smallestUnitAmount: number;
-  currency: Payment['currency'];
-  startedAt: number;
-  phase: ProcessingPhase;
-}
-
-export interface PaymentCreationAdmission {
-  schedule(payment: Payment, idempotencyKey: string): void;
-}
+} from './payment-processing.constants';
+import type {
+  PaymentCreationAdmission,
+  PaymentOutcomeResolver,
+  ProcessingContext,
+  ProcessingScheduler,
+  ScheduledProcessingTask,
+} from './payment-processing.types';
 
 @Injectable()
 export class PaymentProcessor

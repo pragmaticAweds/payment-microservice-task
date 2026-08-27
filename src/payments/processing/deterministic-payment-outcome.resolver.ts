@@ -2,11 +2,11 @@ import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PAYMENT_STATUS } from '../domain/payment/payment.constants';
-import {
-  type PaymentOutcomeInput,
-  type PaymentOutcomeResolver,
-  type TerminalPaymentStatus,
-} from './payment-outcome-resolver';
+import type {
+  PaymentOutcomeInput,
+  PaymentOutcomeResolver,
+  TerminalPaymentStatus,
+} from './payment-processing.types';
 
 @Injectable()
 export class DeterministicPaymentOutcomeResolver implements PaymentOutcomeResolver {
